@@ -337,6 +337,11 @@ async def create_test(request: Request, input_data: JSON_Test_Input):
 				elif (correct_answer < 2 or len(question.answers) < 3) and question.questionType == "multiple":
 					raise HTTPException(status_code=500, detail="Debe haber al menos dos respuestas correctas y tres preguntas para un test de selección múltiple")
 
+				existing_test = session.query(Test).filter(Test.title == input_data.title).first()
+
+				if existing_test is not None:
+					raise HTTPException(status_code=400, detail="Ya existe un test con este título")
+				
 			new_test = Test(
 				title=input_data.title,
 				image=input_data.image,
