@@ -21,7 +21,7 @@ class Question(Base):
 	test_id = Column(Integer, ForeignKey('test.id'))
 	title = Column(String, nullable=False)
 	image = Column(String)
-	questionType = Column(Enum('unica', 'multiple'), nullable=False)
+	#questionType = Column(Enum('unica', 'multiple'), nullable=False)
 	allocatedTime = Column(Integer, nullable=False)
 	questionOrder = Column(Integer)
 	weight = Column(Integer, nullable=False)
@@ -39,7 +39,7 @@ class Answer(Base):
 class Player(Base):
 	__tablename__ = 'player'
 	id = Column(Integer, primary_key=True, autoincrement=True)
-	name = Column(String, nullable=False)
+	name = Column(String, nullable=False, unique=True)
 	createdAt = Column(DateTime)
 	results = relationship("Result", backref="player", cascade="all, delete-orphan")
 
