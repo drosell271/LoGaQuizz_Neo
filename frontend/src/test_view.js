@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 function DetalleTest() {
 	const [test, setTest] = useState(null);
 	const navigate = useNavigate();
-	const { id } = useParams(); // Recibe algo como "id=1"
+	const { id } = useParams();
 	const token = localStorage.getItem("token");
 
 	const fetchTest = useCallback(async () => {
@@ -72,9 +72,13 @@ function DetalleTest() {
 		}
 	};
 
+	const handlePlay = async () => {
+		console.log("Jugar ha sido clickeado");
+		console.log("test state", test, test.archiv);
+	};
 	return (
 		<div className="container-fluid">
-			{" "}
+			{""}
 			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
 				<a className="navbar-brand" href="#">
 					<img
@@ -110,7 +114,13 @@ function DetalleTest() {
 				</button>
 			</nav>
 			<div className="row">
-				<aside className="col-md-3">
+				<aside className="col-md-2 d-flex flex-column">
+					<button
+						className="btn btn-success mb-3"
+						onClick={handlePlay}
+					>
+						Jugar
+					</button>
 					<button
 						className="btn btn-primary mb-3"
 						onClick={handleEdit}
@@ -118,16 +128,20 @@ function DetalleTest() {
 						Editar
 					</button>
 					<button
-						className="btn btn-secondary mb-3"
+						className="btn btn-primary mb-3"
 						onClick={handleViewGames}
 					>
-						Ver Juegos
+						Juegos
 					</button>
 					<button
 						className="btn btn-warning mb-3"
 						onClick={handleArchive}
 					>
-						Archivar
+						{test
+							? test.archived
+								? "Desarchivar"
+								: "Archivar"
+							: "Cargando..."}
 					</button>
 					<button
 						className="btn btn-danger mb-3"
@@ -137,16 +151,25 @@ function DetalleTest() {
 					</button>
 				</aside>
 
-				<section className="col-md-9">
+				<section className="col-md-10">
 					{test && (
 						<div className="card">
 							<img
 								src={test.image}
 								className="card-img-top"
 								alt={`Test ${test.title}`}
+								onError={(e) => {
+									e.target.onerror = null;
+									e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
+								}}
+								style={{
+									height: "150px",
+									objectFit: "cover",
+									width: "100%",
+								}}
 							/>
 							<div className="card-body">
-								<h5 className="card-title">{test.title}</h5>
+								<h2 className="card-title">{test.title}</h2>
 								<p className="card-text">
 									Jugado: {test.played} veces
 								</p>
@@ -162,44 +185,94 @@ function DetalleTest() {
 										test.updatedAt
 									).toLocaleDateString()}
 								</p>
-
-								<h6>Preguntas:</h6>
-								{test.questions.map((question) => (
+								<br />
+								<h5 className="mt-4 mb-4">Preguntas:</h5>
+								{test.questions.map((question, index) => (
 									<div key={question.id} className="mb-3">
-										<p>
-											<strong>Título:</strong>{" "}
-											{question.title}
-										</p>
-										<p>
-											<strong>Tiempo Asignado:</strong>{" "}
-											{question.allocatedTime} segundos
-										</p>
-										<p>
-											<strong>Valor:</strong>{" "}
-											{question.weight}
-										</p>
-										<img
-											src={question.image}
-											alt={`Pregunta ${question.title}`}
-											className="img-fluid mb-2"
-										/>
-										<ul>
-											{question.answers.map((answer) => (
-												<li
-													key={answer.id}
-													className={
-														answer.isCorrect
-															? "text-success"
-															: ""
-													}
+										{/* Fondo gris debajo de la imagen y del contenido */}
+										<div
+											className="d-flex"
+											style={{
+												backgroundColor: "#f8f9fa",
+												borderRadius: "10px",
+											}}
+										>
+											{/* Contenedor de la imagen con bordes redondeados */}
+											<div
+												className="me-3"
+												style={{
+													backgroundImage: `url(${question.image}), url(${process.env.PUBLIC_URL}/default-banner.png)`,
+													backgroundSize: "cover",
+													backgroundPosition:
+														"center",
+													borderTopLeftRadius: "10px",
+													borderBottomLeftRadius:
+														"10px",
+													width: "100px", // Establece el ancho que desees para la imagen
+													minHeight: "150px", // Ajusta esto según el contenido o la altura deseada
+												}}
+												onError={(e) =>
+													(e.currentTarget.style.backgroundImage = `url(${process.env.PUBLIC_URL}/default-banner.png)`)
+												}
+											>
+												{/* Este div permanece vacío; la imagen es un fondo */}
+											</div>
+											{/* Contenido de la pregunta */}
+											<div
+												style={{
+													flex: 1,
+													padding: "10px",
+												}}
+											>
+												<div
+													style={{
+														fontWeight: "bold",
+														marginBottom: "10px",
+													}}
 												>
-													{answer.title}{" "}
-													{answer.isCorrect
-														? "(Correcta)"
-														: ""}
-												</li>
-											))}
-										</ul>
+													Pregunta {index + 1}{" "}
+													{/* Contador de preguntas */}
+												</div>
+												<p>
+													<strong>
+														{question.title}
+													</strong>
+												</p>
+												{/* Contenedor para Tiempo y Puntos al mismo nivel y alineados a la izquierda */}
+												<div className="d-flex align-items-start">
+													<p className="me-3">
+														{" "}
+														{/* Aumenta el espacio entre "Tiempo" y "Puntos" */}
+														<strong>Tiempo:</strong>{" "}
+														{question.allocatedTime}{" "}
+														segundos
+													</p>
+													<p>
+														<strong>Puntos:</strong>{" "}
+														{question.weight}
+													</p>
+												</div>
+												<ul>
+													{question.answers.map(
+														(answer) => (
+															<li
+																key={answer.id}
+																className={
+																	answer.isCorrect
+																		? "text-success"
+																		: ""
+																}
+															>
+																{answer.title}{" "}
+																{answer.isCorrect
+																	? "(Correcta)"
+																	: ""}
+															</li>
+														)
+													)}
+												</ul>
+											</div>
+										</div>
 									</div>
 								))}
 							</div>

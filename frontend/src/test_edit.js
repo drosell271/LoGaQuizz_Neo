@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 function EditTest() {
@@ -18,6 +18,9 @@ function EditTest() {
 			},
 		],
 	});
+
+	const fileInputRef = useRef(null);
+	const questionFileInputRefs = useRef({});
 
 	const navigate = useNavigate();
 	const { id } = useParams();
@@ -141,41 +144,51 @@ function EditTest() {
 	};
 
 	const isValidForm = () => {
-		// Comprueba si el título del test y la imagen están llenos
-		if (!formData.title.trim() || !formData.image.trim()) {
+		if (!formData.title.trim()) {
+			console.log("El título del test está vacío.");
 			return false;
 		}
 
-		// Comprueba cada pregunta
 		for (const question of formData.questions) {
-			// Comprueba que el título y la imagen de la pregunta no estén vacíos
-			if (!question.title.trim() || !question.image.trim()) {
+			if (!question.title.trim()) {
+				console.log("El título de la pregunta está vacío.");
 				return false;
 			}
 
-			// Comprueba que el tiempo asignado y el peso sean mayores que cero
 			if (question.allocatedTime <= 10 || question.weight <= 0) {
+				console.log(
+					"El tiempo asignado o el peso de la pregunta no es válido."
+				);
 				return false;
 			}
 
-			// Comprueba que haya al menos dos respuestas
 			if (question.answers.length < 2) {
+				console.log("No hay suficientes respuestas para la pregunta.");
 				return false;
 			}
 
-			// Comprueba que al menos una respuesta sea correcta y no esté vacía
 			let correctAnswerFound = false;
 			for (const answer of question.answers) {
-				if (answer.isCorrect && answer.title.trim()) {
+				if (!answer.title.trim()) {
+					console.log(
+						"Una respuesta marcada como correcta está vacía."
+					);
+					return false;
+				}
+
+				if (answer.isCorrect) {
 					correctAnswerFound = true;
 				}
 			}
+
 			if (!correctAnswerFound) {
+				console.log(
+					"No se encontró ninguna respuesta correcta para la pregunta."
+				);
 				return false;
 			}
 		}
 
-		// Si todas las comprobaciones anteriores son correctas, el formulario es válido
 		return true;
 	};
 
@@ -202,39 +215,88 @@ function EditTest() {
 			}
 
 			alert("Test guardado con éxito");
-			navigate("/menu/test"); // O donde quieras redirigir al usuario después de guardar
+			navigate(`/menu/test/${id}`);
 		} catch (error) {
 			console.error("Error al guardar el test:", error);
 		}
 	};
 
-	const handleCancel = () => {
-		navigate("/menu/test");
+	function handleImageChange(event) {
+		const file = event.target.files[0];
+		if (file) {
+			updateFormField("image", file.name);
+
+			const reader = new FileReader();
+			reader.onload = function (uploadEvent) {};
+			reader.readAsDataURL(file);
+		}
+	}
+
+	const setQuestionFileInputRef = (input, index) => {
+		questionFileInputRefs.current[index] = input;
 	};
+
+	function handleQuestionImageChange(event, qIndex) {
+		const file = event.target.files[0];
+		if (file) {
+			updateFormField("image", file.name);
+
+			const reader = new FileReader();
+			reader.onload = function (uploadEvent) {};
+			reader.readAsDataURL(file);
+		}
+	}
+
+	const handleCancel = () => {
+		navigate(`/menu/test/${id}`);
+	};
+
+	const clearImage = () => {
+		updateFormField("image", "");
+	};
+
+	const clearQuestionImage = (qIndex) => {
+		updateQuestion(qIndex, "image", "");
+	};
+
+	const canAddQuestion = () => formData.questions.length < 10;
+	const canAddAnswer = (qIndex) =>
+		formData.questions[qIndex].answers.length < 4;
+	const canRemoveAnswer = (qIndex) =>
+		formData.questions[qIndex].answers.length > 2;
+	const hasCorrectAnswer = (qIndex) =>
+		formData.questions[qIndex].answers.some((answer) => answer.isCorrect);
+	const canRemoveQuestion = () => formData.questions.length > 1;
 
 	return (
 		<div className="container-fluid">
-			<nav className="navbar navbar-expand-lg navbar-light bg-light">
+			{""}
+			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+				<a className="navbar-brand" href="#">
+					<img
+						src={`${process.env.PUBLIC_URL}/logo.png`}
+						alt="Logo"
+						height="30"
+					/>
+				</a>
+				<div className="navbar-nav">
+					<a
+						href="#"
+						onClick={() => navigate("/menu/test")}
+						className="nav-link"
+					>
+						Test
+					</a>
+					<a
+						href="#"
+						onClick={() => navigate("/menu/players")}
+						className="nav-link"
+					>
+						Jugadores
+					</a>
+				</div>
 				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/test")}
-				>
-					Test
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/players")}
-				>
-					Jugadores
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/games")}
-				>
-					Juegos
-				</button>
-				<button
-					className="btn btn-link"
+					className="btn btn-danger ms-auto"
 					onClick={() => {
 						localStorage.removeItem("token");
 						navigate("/login");
@@ -243,101 +305,152 @@ function EditTest() {
 					Logout
 				</button>
 			</nav>
-
 			<div className="row">
-				<aside className="col-md-3">
+				<aside className="col-md-2 d-flex flex-column">
 					<button
-						className="btn btn-primary mb-3"
+						className="btn btn-success mb-3"
 						onClick={handleSave}
 						disabled={!isValidForm()}
 					>
 						Guardar
 					</button>
 					<button
-						className="btn btn-secondary mb-3"
+						className="btn btn-danger mb-3"
 						onClick={handleCancel}
 					>
 						Cancelar
 					</button>
 				</aside>
-
-				<section className="col-md-9">
+				<main className="col-md-10">
 					<div className="card p-3">
-						<input
-							type="text"
-							className="form-control mb-3"
-							value={formData.title}
-							onChange={(e) =>
-								updateFormField("title", e.target.value)
-							}
-							placeholder="Título del Test"
-						/>
-						<input
-							type="text"
-							className="form-control mb-3"
-							value={formData.image}
-							onChange={(e) =>
-								updateFormField("image", e.target.value)
-							}
-							placeholder="URL de la Imagen"
-						/>
-
-						<h6>Preguntas:</h6>
+						{/* ... (inputs para el título del test y para la imagen del test) */}
+						<div className="mb-3">
+							<label className="form-label">
+								Título del Test
+							</label>
+							<input
+								type="text"
+								className="form-control"
+								value={formData.title}
+								onChange={(e) =>
+									updateFormField("title", e.target.value)
+								}
+							/>
+						</div>
+						<div className="mb-3">
+							<label className="form-label">
+								URL de la Imagen
+							</label>
+							<div className="input-group">
+								<input
+									type="text"
+									className="form-control"
+									value={formData.image || ""} // Asegura que el valor no sea undefined
+									onChange={(e) =>
+										updateFormField("image", e.target.value)
+									}
+								/>
+								<input
+									type="file"
+									style={{ display: "none" }}
+									ref={fileInputRef}
+									onChange={handleImageChange}
+									accept="image/*"
+								/>
+								<button
+									className="btn btn-outline-secondary"
+									onClick={() => fileInputRef.current.click()}
+								>
+									Subir Imagen
+								</button>
+								<button
+									className="btn btn-outline-danger"
+									onClick={clearImage}
+								>
+									Borrar Imagen
+								</button>
+							</div>
+						</div>
 						{formData.questions.map((question, qIndex) => (
-							<div key={qIndex} className="border p-3 mb-3">
-								<input
-									type="text"
-									className="form-control mb-2"
-									value={question.title}
-									onChange={(e) =>
-										updateQuestion(
-											qIndex,
-											"title",
-											e.target.value
-										)
-									}
-									placeholder="Título de la Pregunta"
-								/>
-								<input
-									type="text"
-									className="form-control mb-2"
-									value={question.image}
-									onChange={(e) =>
-										updateQuestion(
-											qIndex,
-											"image",
-											e.target.value
-										)
-									}
-									placeholder="URL de la Imagen de la Pregunta"
-								/>
-								<input
-									type="number"
-									className="form-control mb-2"
-									value={question.allocatedTime}
-									onChange={(e) =>
-										updateQuestion(
-											qIndex,
-											"allocatedTime",
-											e.target.value
-										)
-									}
-									placeholder="Tiempo asignado (segundos)"
-								/>
-								<input
-									type="number"
-									className="form-control mb-2"
-									value={question.weight}
-									onChange={(e) =>
-										updateQuestion(
-											qIndex,
-											"weight",
-											e.target.value
-										)
-									}
-									placeholder="Peso de la pregunta"
-								/>
-
+							<div
+								key={qIndex}
+								className="border p-3 mb-3 bg-light"
+							>
+								<div className="mb-3">
+									<label className="form-label">
+										Título de la Pregunta
+									</label>
+									<input
+										type="text"
+										className="form-control"
+										value={question.title}
+										onChange={(e) =>
+											updateQuestion(
+												qIndex,
+												"title",
+												e.target.value
+											)
+										}
+									/>
+								</div>
+								<div className="mb-3">
+									<label className="form-label">
+										URL de la Imagen de la Pregunta
+									</label>
+									<div className="input-group">
+										<input
+											type="text"
+											className="form-control"
+											value={question.image || ""}
+											onChange={(e) =>
+												updateQuestion(
+													qIndex,
+													"image",
+													e.target.value
+												)
+											}
+										/>
+										<input
+											type="file"
+											style={{ display: "none" }}
+											ref={(input) =>
+												setQuestionFileInputRef(
+													input,
+													qIndex
+												)
+											}
+											onChange={(e) =>
+												handleQuestionImageChange(
+													e,
+													qIndex
+												)
+											}
+											accept="image/*"
+										/>
+										<button
+											className="btn btn-outline-secondary"
+											onClick={() =>
+												questionFileInputRefs.current[
+													qIndex
+												].click()
+											}
+										>
+											Subir Imagen
+										</button>
+										<button
+											className="btn btn-outline-danger"
+											onClick={() =>
+												clearQuestionImage(qIndex)
+											}
+										>
+											Borrar Imagen
+										</button>
+									</div>
+								</div>
+								<br />
+								<div className="mb-3">
+									<h7>Respuestas</h7>
+								</div>
 								{question.answers.map((answer, aIndex) => (
 									<div
 										key={aIndex}
@@ -365,47 +478,60 @@ function EditTest() {
 												setCorrectAnswer(qIndex, aIndex)
 											}
 										/>
-										<label className="form-check-label">
+										<label className="form-check-label me-2">
 											Correcta
 										</label>
-										{question.answers.length > 2 && (
-											<button
-												onClick={() =>
-													removeAnswer(qIndex, aIndex)
-												}
-												className="btn btn-danger ms-2"
-											>
-												Eliminar Respuesta
-											</button>
-										)}
+										<button
+											onClick={() =>
+												removeAnswer(qIndex, aIndex)
+											}
+											className="btn btn-danger ms-2"
+											disabled={
+												!canRemoveAnswer(qIndex) ||
+												!hasCorrectAnswer(qIndex)
+											}
+										>
+											Eliminar
+										</button>
 									</div>
 								))}
-								{question.answers.length < 4 && (
+								<div className="d-flex justify-content-end">
 									<button
 										onClick={() => addAnswer(qIndex)}
 										className="btn btn-primary mb-2"
+										disabled={!canAddAnswer(qIndex)}
 									>
-										Añadir Respuesta
+										Añadir
 									</button>
-								)}
-								{formData.questions.length > 1 && (
-									<button
-										onClick={() => removeQuestion(qIndex)}
-										className="btn btn-danger"
-									>
-										Eliminar Pregunta
-									</button>
+								</div>
+								{canRemoveQuestion() && (
+									<div className="d-grid gap-2">
+										<button
+											onClick={() =>
+												removeQuestion(qIndex)
+											}
+											className="btn btn-danger"
+											disabled={
+												formData.questions.length <= 1
+											}
+										>
+											Eliminar Pregunta
+										</button>
+									</div>
 								)}
 							</div>
 						))}
-						<button
-							onClick={addQuestion}
-							className="btn btn-success"
-						>
-							Añadir Pregunta
-						</button>
+						<div className="d-grid gap-2">
+							<button
+								onClick={addQuestion}
+								className="btn btn-success"
+								disabled={!canAddQuestion()}
+							>
+								Añadir Pregunta
+							</button>
+						</div>
 					</div>
-				</section>
+				</main>
 			</div>
 		</div>
 	);
