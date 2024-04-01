@@ -82,6 +82,7 @@ class JSON_Solution_Output(BaseModel):
 class JSON_Result_Output(BaseModel):
 	id: int
 	player_id: int
+	player_name: str
 	game_id: int
 	score: int
 	solutions: Optional[List[JSON_Solution_Output]]
@@ -390,8 +391,8 @@ async def create_test(token: str, input_data: JSON_Test_Input):
 async def edit_test(token: str, ID: int, input_data: JSON_Test_Input):
 	await is_admin(token)
 	try:
-		await delete_test_by_ID(ID, token)
-		await create_test(input_data, token)
+		await delete_test_by_ID(ID=ID, token=token)
+		await create_test(input_data=input_data, token=token)
 		return {"detail": "Test editado correctamente"}
 	except HTTPException as e:
 		raise e
@@ -434,6 +435,7 @@ async def get_all_results(token: str, ID: int):
 					JSON_Result_Output(
 						id=result.id,
 						player_id=result.player_id,
+						player_name=session.query(Player).filter(Player.id == result.player_id).first().name,
 						game_id=result.game_id,
 						score=result.score,
 						solutions=None
@@ -489,6 +491,7 @@ async def get_results_by_game(token: str, ID: int, GAME_ID: int):
 				JSON_Result_Output(
 					id=result.id,
 					player_id=result.player_id,
+					player_name=session.query(Player).filter(Player.id == result.player_id).first().name,
 					game_id=result.game_id,
 					score=result.score,
 					solutions=[
@@ -581,6 +584,7 @@ async def get_all_results_by_player(token: str, ID: int, response_model=List[JSO
 					results_json = [JSON_Result_Output(
 						id=result.id,
 						player_id=result.player_id,
+						player_name=session.query(Player).filter(Player.id == result.player_id).first().name,
 						game_id=result.game_id,
 						score=result.score,
 						solutions=None
@@ -639,11 +643,11 @@ async def get_results_by_player(token: str, ID: int, GAME_ID: int):
 		test = session.query(Test).filter(Test.id == game.test_id).first()
 		if test is None:
 			raise HTTPException(status_code=404, detail="Test no encontrado")
-
 		result_data = [
 			JSON_Result_Output(
 			id=result.id,
 			player_id=result.player_id,
+			player_name=session.query(Player).filter(Player.id == ID).first().name,
 			game_id=result.game_id,
 			score=result.score,
 			solutions=[
@@ -862,6 +866,7 @@ DONE = None
 
 UPDATE = None
 
+CONNECTIONS = []
 TEMP_RESULT = {}
 STATS = []
 
@@ -987,9 +992,6 @@ async def transmitir(websocket: WebSocket, token: str):
 				}
 				await websocket.send_text(json.dumps(mensaje))
 
-				cadena_json = json.dumps(STATS)
-
-				await websocket.send_text(cadena_json)
 			else:
 				mensaje = {
 					"mode": "RESULTS",
@@ -1000,6 +1002,7 @@ async def transmitir(websocket: WebSocket, token: str):
 				}
 
 				await websocket.send_text(json.dumps(mensaje))
+			await asyncio.sleep(10)
 		elif MODE == "END":
 			if admin:
 				mensaje = {
@@ -1018,6 +1021,8 @@ async def transmitir(websocket: WebSocket, token: str):
 					"score": TEMP_RESULT[token].score
 				}
 				await websocket.send_text(json.dumps(mensaje))
+
+			await asyncio.sleep(10)
 
 		await asyncio.sleep(1)
 
@@ -1089,9 +1094,21 @@ async def recibir(websocket: WebSocket, token: str):
 				elif data == "END":
 					MODE = "END"
 		elif MODE == "END":
-			pass
+			if admin:
+				data = await websocket.receive_text()
+				if data == "SAVE":
+					await save_game(websocket, token)
+					await close_all_connections()
+					await websocket.close()
+				elif data == "CLOSE":
+					await close_all_connections()
+					await websocket.close()
 
 		await asyncio.sleep(1)
+
+async def close_all_connections():
+	for connection in CONNECTIONS:
+		await connection.close()
 
 async def calculate_results():
     global TEMP_RESULT, STATS, DONE
@@ -1121,7 +1138,48 @@ async def calculate_results():
         STATS.append(temp_stats)
         DONE = True
 
+async def save_game(websocket: WebSocket, token: str):
+	global TEST, TEMP_RESULT
 	
+	test = session.query(Test).filter(Test.id == TEST.id).first()
+	if not test:
+		await websocket.send_text(json.dumps({"error": "Test no encontrado"}))
+		return
+	
+	new_game = Game(
+		test_id=TEST.id,
+		playedAt=datetime.now()
+	)
+
+	session.add(new_game)
+	session.flush()
+
+	for token in TEMP_RESULT:
+		player = session.query(Player).filter(Player.name == PLAYERS_TOKEN[token]).first()
+		if not player:
+			await websocket.send_text(json.dumps({"error": "Jugador no encontrado"}))
+			return
+
+		new_result = Result(
+			player_id=player.id,
+			game_id=new_game.id,
+			score=TEMP_RESULT[token].score
+		)
+		session.add(new_result)
+		session.flush()
+
+		for solution in TEMP_RESULT[token].solutions:
+			new_solution = Solution(
+				result_id=new_result.id,
+				question_id=solution.question_id,
+				answer_id=solution.answer_id,
+				time=solution.time
+			)
+			session.add(new_solution)
+
+		session.commit()
+	
+	await websocket.send_text(json.dumps({"status": "Partida guardada correctamente"}))
 	
 	
 
@@ -1132,7 +1190,7 @@ async def calculate_results():
 
 @app.websocket("/play/test={testID}/token={token}")
 async def admin_websocket(websocket: WebSocket, testID: int, token: str):
-	global MODE, PIN, TEST, TOTAL_PREGUNTAS, PREGUNTA_ACTUAL, UPDATE, PLAYERS_TOKEN, TEMP_RESULT, STATS
+	global MODE, PIN, TEST, TOTAL_PREGUNTAS, PREGUNTA_ACTUAL, UPDATE, PLAYERS_TOKEN, TEMP_RESULT, STATS, CONNECTIONS
 	await websocket.accept()
 
 	try:
@@ -1149,7 +1207,7 @@ async def admin_websocket(websocket: WebSocket, testID: int, token: str):
 		PLAYERS_TOKEN.clear()
 		TEMP_RESULT.clear()
 		STATS.clear()
-
+		CONNECTIONS.clear()
 		if not TEST:
 			await websocket.send_text(json.dumps({"error": "Test no encontrado"}))
 			return
@@ -1236,6 +1294,7 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 			await websocket.close()
 			return
 		UPDATE = True
+		CONNECTIONS.append(websocket)
 		send_task = asyncio.create_task(transmitir(websocket, token))
 		receive_task = asyncio.create_task(recibir(websocket, token))
 		await asyncio.gather(send_task, receive_task)

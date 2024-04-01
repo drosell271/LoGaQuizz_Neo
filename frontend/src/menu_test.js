@@ -1,0 +1,341 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+function MenuTest() {
+	const [tests, setTests] = useState([]);
+	const [searchTerm, setSearchTerm] = useState("");
+	const [archiveFilter, setArchiveFilter] = useState("todos");
+	const [playedFilter, setPlayedFilter] = useState("todos");
+	const navigate = useNavigate();
+	const token = localStorage.getItem("token");
+
+	useEffect(() => {
+		fetchTests();
+	}, [token]);
+
+	const fetchTests = async () => {
+		try {
+			const response = await fetch(
+				`http://localhost:8000/test/all/token=${token}`
+			);
+			if (!response.ok) {
+				throw new Error("Error al cargar los tests");
+			}
+			const data = await response.json();
+			setTests(data);
+		} catch (error) {
+			console.error(error.message);
+		}
+	};
+
+	const handleInfo = (testId) => {
+		navigate(`/menu/test/${testId}`);
+	};
+
+	const handleArchiveToggle = async (testId, archivedStatus) => {
+		try {
+			const response = await fetch(
+				`http://localhost:8000/test/${testId}/archive/token=${token}`,
+				{ method: "POST" }
+			);
+			if (!response.ok) {
+				throw new Error(
+					`Error al ${
+						archivedStatus ? "desarchivar" : "archivar"
+					} el test`
+				);
+			}
+			fetchTests();
+		} catch (error) {
+			console.error(error.message);
+		}
+	};
+
+	const handleDelete = async (testId) => {
+		if (window.confirm("¿Estás seguro de eliminar el test?")) {
+			try {
+				const response = await fetch(
+					`http://localhost:8000/test/${testId}/delete/token=${token}`,
+					{ method: "DELETE" }
+				);
+				if (!response.ok) {
+					throw new Error("Error al eliminar el test");
+				}
+				fetchTests();
+			} catch (error) {
+				console.error(error.message);
+			}
+		}
+	};
+
+	const handleNewTest = () => {
+		navigate("/menu/test/new");
+	};
+
+	const handleSearchChange = (e) => {
+		setSearchTerm(e.target.value.toLowerCase());
+	};
+
+	const handleResetFilters = () => {
+		setSearchTerm("");
+		setArchiveFilter("todos");
+		setPlayedFilter("todos");
+	};
+
+	const filteredTests = tests.filter((test) => {
+		const archiveCondition =
+			archiveFilter === "todos" ||
+			(archiveFilter === "archivados" && test.archived) ||
+			(archiveFilter === "noArchivados" && !test.archived);
+		const playedCondition =
+			playedFilter === "todos" ||
+			(playedFilter === "jugados" && test.played > 0) ||
+			(playedFilter === "noJugados" && test.played === 0);
+
+		return (
+			test.title.toLowerCase().includes(searchTerm) &&
+			archiveCondition &&
+			playedCondition
+		);
+	});
+
+	const defaultImage = "";
+	return (
+		<div className="container-fluid">
+			{" "}
+			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+				<a className="navbar-brand" href="#">
+					<img
+						src={`${process.env.PUBLIC_URL}/logo.png`}
+						alt="Logo"
+						height="30"
+					/>
+				</a>
+				<div className="navbar-nav">
+					<a
+						href="#"
+						onClick={() => navigate("/menu/test")}
+						className="nav-link"
+					>
+						Test
+					</a>
+					<a
+						href="#"
+						onClick={() => navigate("/menu/players")}
+						className="nav-link"
+					>
+						Jugadores
+					</a>
+				</div>
+				<button
+					className="btn btn-danger ms-auto"
+					onClick={() => {
+						localStorage.removeItem("token");
+						navigate("/login");
+					}}
+				>
+					Logout
+				</button>
+			</nav>
+			<div className="row">
+				<aside className="col-md-3">
+					<button
+						className="btn btn-success mb-3 w-100"
+						onClick={handleNewTest}
+					>
+						Nuevo Test
+					</button>
+
+					<input
+						type="text"
+						className="form-control mb-3 w-100"
+						placeholder="Buscar Test"
+						value={searchTerm}
+						onChange={handleSearchChange}
+					/>
+
+					<div className="bg-light p-2 rounded-3 mb-3">
+						<div className="nav nav-pills nav-fill">
+							<button
+								className={`nav-link ${
+									archiveFilter === "todos"
+										? "active bg-primary text-white"
+										: "bg-light"
+								}`}
+								style={{ borderRadius: "10px" }}
+								onClick={(e) => {
+									e.preventDefault();
+									setArchiveFilter("todos");
+								}}
+							>
+								Todos
+							</button>
+							<button
+								className={`flex-grow-1 nav-link ${
+									archiveFilter === "archivados"
+										? "active"
+										: ""
+								}`}
+								style={{ borderRadius: "10px" }} // Se remueve width y minWidth, se mantiene border-radius
+								onClick={(e) => {
+									e.preventDefault();
+									setArchiveFilter("archivados");
+								}}
+							>
+								Archivados
+							</button>
+							<button
+								className={`flex-grow-1 nav-link ${
+									archiveFilter === "noArchivados"
+										? "active"
+										: ""
+								}`}
+								style={{ borderRadius: "10px" }} // Se mantiene consistencia en los estilos
+								onClick={(e) => {
+									e.preventDefault();
+									setArchiveFilter("noArchivados");
+								}}
+							>
+								No Archivados
+							</button>
+						</div>
+					</div>
+					<div className="bg-light p-2 rounded-3 mb-3">
+						<div className="nav nav-pills nav-fill">
+							<button
+								className={`nav-link ${
+									playedFilter === "todos" ? "active" : ""
+								}`}
+								style={{
+									borderRadius: "10px",
+									width: "auto",
+									minWidth: "100px",
+								}}
+								onClick={(e) => {
+									e.preventDefault();
+									setPlayedFilter("todos");
+								}}
+							>
+								Todos
+							</button>
+							<button
+								className={`nav-link ${
+									playedFilter === "jugados" ? "active" : ""
+								}`}
+								style={{
+									borderRadius: "10px",
+									width: "auto",
+									minWidth: "100px",
+								}} // Y aquí
+								onClick={(e) => {
+									e.preventDefault();
+									setPlayedFilter("jugados");
+								}}
+							>
+								Jugados
+							</button>
+							<button
+								className={`nav-link ${
+									playedFilter === "noJugados" ? "active" : ""
+								}`}
+								style={{
+									borderRadius: "10px",
+									width: "auto",
+									minWidth: "100px",
+								}} // Y también aquí
+								onClick={(e) => {
+									e.preventDefault();
+									setPlayedFilter("noJugados");
+								}}
+							>
+								No Jugados
+							</button>
+						</div>
+					</div>
+
+					<button
+						className="btn btn-secondary mb-3 w-100"
+						onClick={handleResetFilters}
+					>
+						Resetear Filtros
+					</button>
+				</aside>
+
+				<section className="col-md-9">
+					<div className="row">
+						{filteredTests.map((test) => (
+							<div
+								key={test.id}
+								className="col-md-4 mb-4 d-flex align-items-stretch"
+							>
+								<div className="card" style={{ width: "100%" }}>
+									<img
+										src={
+											test.image ||
+											`${process.env.PUBLIC_URL}/default-banner.png`
+										}
+										className="card-img-top"
+										alt={`Test ${test.title}`}
+										onError={(e) => {
+											e.target.onerror = null;
+											e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
+										}}
+									/>
+									<div className="card-body d-flex flex-column">
+										<h5 className="card-title">
+											{test.title}
+										</h5>
+										<p className="card-text">
+											Jugado: {test.played} veces
+										</p>
+										<p className="card-text">
+											Creado:{" "}
+											{new Date(
+												test.createdAt
+											).toLocaleDateString()}
+										</p>
+										<div className="mt-auto d-flex justify-content-between">
+											<button
+												className="btn btn-info"
+												onClick={() =>
+													handleInfo(test.id)
+												}
+											>
+												Info
+											</button>
+											<div className="d-flex">
+												<button
+													className="btn btn-warning me-2" // Agregado me-2 para dar margen extra
+													onClick={() =>
+														handleArchiveToggle(
+															test.id,
+															!test.archived
+														)
+													}
+												>
+													{test.archived
+														? "Desarchivar"
+														: "Archivar"}
+												</button>
+												<button
+													className="btn btn-danger"
+													onClick={() =>
+														handleDelete(test.id)
+													}
+												>
+													Eliminar
+												</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</section>
+			</div>
+		</div>
+	);
+}
+
+export default MenuTest;
