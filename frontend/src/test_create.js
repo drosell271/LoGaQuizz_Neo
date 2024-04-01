@@ -12,7 +12,7 @@ function CreateTest() {
 				allocatedTime: 30,
 				weight: 1,
 				answers: [
-					{ title: "", isCorrect: false },
+					{ title: "", isCorrect: true },
 					{ title: "", isCorrect: false },
 				],
 			},
