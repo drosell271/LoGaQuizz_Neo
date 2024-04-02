@@ -162,7 +162,6 @@ function MenuTest() {
 										? "active bg-primary text-white"
 										: "bg-light"
 								}`}
-								style={{ borderRadius: "10px" }}
 								onClick={(e) => {
 									e.preventDefault();
 									setArchiveFilter("todos");
@@ -171,12 +170,11 @@ function MenuTest() {
 								Todos
 							</button>
 							<button
-								className={`flex-grow-1 nav-link ${
+								className={`nav-link ${
 									archiveFilter === "archivados"
-										? "active"
-										: ""
+										? "active bg-primary text-white"
+										: "bg-light"
 								}`}
-								style={{ borderRadius: "10px" }} // Se remueve width y minWidth, se mantiene border-radius
 								onClick={(e) => {
 									e.preventDefault();
 									setArchiveFilter("archivados");
@@ -185,32 +183,31 @@ function MenuTest() {
 								Archivados
 							</button>
 							<button
-								className={`flex-grow-1 nav-link ${
+								className={`nav-link ${
 									archiveFilter === "noArchivados"
-										? "active"
-										: ""
+										? "active bg-primary text-white"
+										: "bg-light"
 								}`}
-								style={{ borderRadius: "10px" }} // Se mantiene consistencia en los estilos
 								onClick={(e) => {
 									e.preventDefault();
 									setArchiveFilter("noArchivados");
 								}}
 							>
-								No Archivados
+								No
+								<br />
+								Archivados
 							</button>
 						</div>
 					</div>
+
 					<div className="bg-light p-2 rounded-3 mb-3">
 						<div className="nav nav-pills nav-fill">
 							<button
 								className={`nav-link ${
-									playedFilter === "todos" ? "active" : ""
+									playedFilter === "todos"
+										? "active bg-primary text-white"
+										: "bg-light"
 								}`}
-								style={{
-									borderRadius: "10px",
-									width: "auto",
-									minWidth: "100px",
-								}}
 								onClick={(e) => {
 									e.preventDefault();
 									setPlayedFilter("todos");
@@ -220,13 +217,10 @@ function MenuTest() {
 							</button>
 							<button
 								className={`nav-link ${
-									playedFilter === "jugados" ? "active" : ""
+									playedFilter === "jugados"
+										? "active bg-primary text-white"
+										: "bg-light"
 								}`}
-								style={{
-									borderRadius: "10px",
-									width: "auto",
-									minWidth: "100px",
-								}} // Y aquí
 								onClick={(e) => {
 									e.preventDefault();
 									setPlayedFilter("jugados");
@@ -236,13 +230,10 @@ function MenuTest() {
 							</button>
 							<button
 								className={`nav-link ${
-									playedFilter === "noJugados" ? "active" : ""
+									playedFilter === "noJugados"
+										? "active bg-primary text-white"
+										: "bg-light"
 								}`}
-								style={{
-									borderRadius: "10px",
-									width: "auto",
-									minWidth: "100px",
-								}} // Y también aquí
 								onClick={(e) => {
 									e.preventDefault();
 									setPlayedFilter("noJugados");
@@ -274,7 +265,11 @@ function MenuTest() {
 											test.image ||
 											`${process.env.PUBLIC_URL}/default-banner.png`
 										}
-										className="card-img-top"
+										className="card-img-top img-fluid"
+										style={{
+											maxHeight: "200px",
+											objectFit: "cover",
+										}}
 										alt={`Test ${test.title}`}
 										onError={(e) => {
 											e.target.onerror = null;

@@ -65,7 +65,7 @@ function CreateTest() {
 					allocatedTime: 30,
 					weight: 1,
 					answers: [
-						{ title: "", isCorrect: false },
+						{ title: "", isCorrect: true },
 						{ title: "", isCorrect: false },
 					],
 				},
@@ -125,19 +125,47 @@ function CreateTest() {
 	};
 
 	const isValidForm = () => {
-		if (!formData.title.trim() || !formData.image.trim()) return false;
+		if (!formData.title.trim()) {
+			//console.log("El título del test está vacío.");
+			return false;
+		}
 
 		for (const question of formData.questions) {
-			if (
-				!question.title.trim() ||
-				!question.image.trim() ||
-				question.allocatedTime <= 10 ||
-				question.weight <= 0 ||
-				question.answers.length < 2 ||
-				!question.answers.some(
-					(answer) => answer.isCorrect && answer.title.trim()
-				)
-			) {
+			if (!question.title.trim()) {
+				//console.log("El título de la pregunta está vacío.");
+				return false;
+			}
+
+			if (question.allocatedTime <= 10 || question.weight <= 0) {
+				/*console.log(
+					"El tiempo asignado o el peso de la pregunta no es válido."
+				);*/
+				return false;
+			}
+
+			if (question.answers.length < 2) {
+				//console.log("No hay suficientes respuestas para la pregunta.");
+				return false;
+			}
+
+			let correctAnswerFound = false;
+			for (const answer of question.answers) {
+				if (!answer.title.trim()) {
+					/*console.log(
+						"Una respuesta marcada como correcta está vacía."
+					);*/
+					return false;
+				}
+
+				if (answer.isCorrect) {
+					correctAnswerFound = true;
+				}
+			}
+
+			if (!correctAnswerFound) {
+				/*console.log(
+					"No se encontró ninguna respuesta correcta para la pregunta."
+				);*/
 				return false;
 			}
 		}
@@ -427,7 +455,7 @@ function CreateTest() {
 								</div>
 								<br />
 								<div className="mb-3">
-									<h7>Respuestas</h7>
+									<h6>Respuestas</h6>
 								</div>
 								{question.answers.map((answer, aIndex) => (
 									<div

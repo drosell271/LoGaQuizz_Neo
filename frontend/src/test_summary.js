@@ -58,26 +58,38 @@ function TestResults() {
 
 	return (
 		<div className="container-fluid">
-			<nav className="navbar navbar-expand-lg navbar-light bg-light">
+			{""}
+			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+				<a className="navbar-brand" href="#">
+					<img
+						src={`${process.env.PUBLIC_URL}/logo.png`}
+						alt="Logo"
+						height="30"
+					/>
+				</a>
+				<div className="navbar-nav">
+					<a
+						href="#"
+						onClick={() => navigate("/menu/test")}
+						className="nav-link"
+					>
+						Test
+					</a>
+					<a
+						href="#"
+						onClick={() => navigate("/menu/players")}
+						className="nav-link"
+					>
+						Jugadores
+					</a>
+				</div>
 				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/test")}
+					className="btn btn-danger ms-auto"
+					onClick={() => {
+						localStorage.removeItem("token");
+						navigate("/login");
+					}}
 				>
-					Test
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/players")}
-				>
-					Jugadores
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/games")}
-				>
-					Juegos
-				</button>
-				<button className="btn btn-link" onClick={handleLogout}>
 					Logout
 				</button>
 			</nav>

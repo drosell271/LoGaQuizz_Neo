@@ -10,6 +10,8 @@ import random
 import uuid
 import asyncio
 from starlette.websockets import WebSocketState
+import json
+import asyncio
 
 
 from .db_config import Test, Question, Answer, Game, Result, Player, Solution
@@ -855,374 +857,78 @@ async def delete_player(token: str, ID: int):
 	finally:
 		session.close()
 
+
+# RUTAS DE WEBSOCKET
+		
 MODE = None
 PIN = None
 TEST = None
-TOTAL_PREGUNTAS = None
-PREGUNTA_ACTUAL = None
-TOTAL_RESPONSES = None
-TIME = None
-DONE = None
+TOTAL_QUESTIONS = 0
 
-UPDATE = None
+CURRENT_QUESTION = 0
+TOTAL_RESPONSES = 0
+TIME = 0
+COUNTDOWN = 0
 
-CONNECTIONS = []
-TEMP_RESULT = {}
-STATS = []
+RESULTS_CALCULATED = False
 
-async def transmitir(websocket: WebSocket, token: str):
-	global TIME, MODE, UPDATE, TOTAL_RESPONSES
-	if token == ADMIN_TOKEN:
-		admin = True
-	else:
-		admin = False
-	
-	while True:
-		if MODE == "LOBBY" and UPDATE:
-			if admin:
-				mensaje = {
-					"mode": "LOBBY",
-					"PIN": PIN,
-					"test": TEST.title,
-					"image": TEST.image,
-					"players": list(PLAYERS_TOKEN.values()),
-					"questions": TOTAL_PREGUNTAS,
-					"instructions": "Esperando jugadores se unan, enviar 'START' para comenzar la partida"
-				}
-				UPDATE = False
-				await websocket.send_text(json.dumps(mensaje))
-			else:
-				mensaje = {
-					"mode": "LOBBY",
-					"name": PLAYERS_TOKEN[token],
-					"token": token
-				}
-				await websocket.send_text(json.dumps(mensaje))
-		elif MODE == "LOADING":
-			for countdown in range(5, 0, -1):
-				mensaje = {
-					"mode": "LOADING",
-					"countdown": countdown,
-					"time": TIME
-				}
-				await websocket.send_text(json.dumps(mensaje))
-				await asyncio.sleep(1)
-			MODE = "PLAYING"
-		elif MODE == "PLAYING":
-			if admin:
-				Question = TEST.questions[PREGUNTA_ACTUAL]
-				mensaje = {
-					"mode": "PLAYING",
-					"question": [
-						{
-							"question_id": Question.id,
-							"question_title": Question.title,
-							"question_image": Question.image,
-							#"question_type": Question.questionType,
-							"question_weight": Question.weight,
-							"question_answers": [
-								{
-									"answers_id": answer.id,
-									"answers_title": answer.title,
-								} for answer in Question.answers
-								]
-						}
-					],
-					"question_current": PREGUNTA_ACTUAL,
-					"question_total": TOTAL_PREGUNTAS,
-					"question_time": TIME,
-					"responses": TOTAL_RESPONSES,
-					"players": len(PLAYERS_TOKEN),
-					"instructions": "Puedes ver los resultados mandando 'SKIP'"
-				}
-				await websocket.send_text(json.dumps(mensaje))
-				TIME -= 1
-				if TIME == 0:
-					await calculate_results()
-					MODE = "RESULTS"
-			else:
-				Question = TEST.questions[PREGUNTA_ACTUAL]
-				mensaje = {
-					"mode": "PLAYING",
-					"question": [
-						{
-							"question_id": Question.id,
-							"question_title": Question.title,
-							#"question_type": Question.questionType,
-							"question_answers": [
-								{
-									"answers_id": answer.id,
-									"answers_title": answer.title,
-								} for answer in Question.answers
-								]
-						}
-					],
-					"question_time": TIME
-				}
-				await websocket.send_text(json.dumps(mensaje))
-			await asyncio.sleep(1)
-			pass
-		elif MODE == "RESULTS":
-			if admin:
-				mensaje = {
-					"mode": "RESULTS",
-					"global_score": [
-						{
-							"player": PLAYERS_TOKEN[token],
-							"score": TEMP_RESULT[token].score
-						} for token in TEMP_RESULT
-					],
-					"number question": PREGUNTA_ACTUAL,
-					"question": TEST.questions[PREGUNTA_ACTUAL].title,
-					"answers": [
-						{
-							"player": PLAYERS_TOKEN[token],
-							"answer": STATS[PREGUNTA_ACTUAL][token][1],
-							"correct": STATS[PREGUNTA_ACTUAL][token][2]
-						} for token in STATS[PREGUNTA_ACTUAL]
-					],
-					"posible_answers": [
-						{
-							"answers": answer.title,
-							"correct": answer.isCorrect
-						} for answer in TEST.questions[PREGUNTA_ACTUAL].answers
-					],
-					"instructions": "Enviar 'NEXT' para continuar con la siguiente pregunta o 'END' para finalizar la partida"
-
-				}
-				await websocket.send_text(json.dumps(mensaje))
-
-			else:
-				mensaje = {
-					"mode": "RESULTS",
-					"score": TEMP_RESULT[token].score,
-					"question": STATS[PREGUNTA_ACTUAL][token][0],
-					"answer": STATS[PREGUNTA_ACTUAL][token][1],
-					"correct": STATS[PREGUNTA_ACTUAL][token][2]
-				}
-
-				await websocket.send_text(json.dumps(mensaje))
-			await asyncio.sleep(10)
-		elif MODE == "END":
-			if admin:
-				mensaje = {
-					"mode": "END",
-					"results": [
-						{
-							"player": PLAYERS_TOKEN[token],
-							"score": TEMP_RESULT[token].score
-						} for token in TEMP_RESULT
-					]
-				}
-				await websocket.send_text(json.dumps(mensaje))
-			else:
-				mensaje = {
-					"mode": "END",
-					"score": TEMP_RESULT[token].score
-				}
-				await websocket.send_text(json.dumps(mensaje))
-
-			await asyncio.sleep(10)
-
-		await asyncio.sleep(1)
-
-async def recibir(websocket: WebSocket, token: str):
-	global TIME, PREGUNTA_ACTUAL, MODE, TEMP_RESULT, TOTAL_RESPONSES, STATS, DONE
-	if token == ADMIN_TOKEN:
-		admin = True
-	else:
-		admin = False
-
-	while True:
-		if MODE == "LOBBY" and admin:
-			data = await websocket.receive_text()
-			if data == "START" and len(PLAYERS_TOKEN) > 0:
-				TIME = TEST.questions[PREGUNTA_ACTUAL].allocatedTime
-				PREGUNTA_ACTUAL = 0
-				TOTAL_RESPONSES = 0
-
-				await create_player(token)
-
-				for clave, valor in PLAYERS_TOKEN.items():
-					temp_player = session.query(Player).filter(Player.name == valor).first()
-					TEMP_RESULT[clave] = JSON_Result_Input(
-						player_id=temp_player.id,
-						score=0,
-						solutions=[]
-					)
-				MODE = "LOADING"
-			else:
-				await websocket.send_text(json.dumps({"error": "No hay jugadores suficientes o el comando es incorrecto"}))
-		elif MODE == "PLAYING":
-			if admin:
-				data = await websocket.receive_text()
-				if data == "SKIP":
-					await calculate_results()
-					MODE = "RESULTS"
-						
-
-			elif TOTAL_RESPONSES >= len(PLAYERS_TOKEN):
-				await calculate_results()
-				MODE = "RESULTS"				
-
-			else:
-				data = await websocket.receive_text()
-				data_dict = json.loads(data)
-
-				solution_input = JSON_Solution_Input(
-					question_id=data_dict["question_id"],
-					answer_id=data_dict["answer_id"],
-					time=TIME
-				)
-
-				if token in TEMP_RESULT:
-					TEMP_RESULT[token].solutions.append(solution_input)
-					TOTAL_RESPONSES += 1
-					await websocket.send_text(json.dumps({"status": "Recibido"}))
-		elif MODE == "RESULTS":
-			if admin:
-				data = await websocket.receive_text()
-				if data == "NEXT":
-					PREGUNTA_ACTUAL += 1
-					TOTAL_RESPONSES = 0
-					DONE = False
-					if PREGUNTA_ACTUAL == TOTAL_PREGUNTAS:
-						MODE = "END"
-					else:
-						TIME = TEST.questions[PREGUNTA_ACTUAL].allocatedTime
-						MODE = "LOADING"
-				elif data == "END":
-					MODE = "END"
-		elif MODE == "END":
-			if admin:
-				data = await websocket.receive_text()
-				if data == "SAVE":
-					await save_game(websocket, token)
-					await close_all_connections()
-					await websocket.close()
-				elif data == "CLOSE":
-					await close_all_connections()
-					await websocket.close()
-
-		await asyncio.sleep(1)
-
-async def close_all_connections():
-	for connection in CONNECTIONS:
-		await connection.close()
-
-async def calculate_results():
-    global TEMP_RESULT, STATS, DONE
-
-    if not DONE:
-        temp_stats = {}
-
-        for token in TEMP_RESULT:
-            solucion_encontrada = False
-
-            for solution in TEMP_RESULT[token].solutions:
-                if TEST.questions[PREGUNTA_ACTUAL].id == solution.question_id:
-                    temp_answer = session.query(Answer).filter(Answer.id == solution.answer_id).first()
-
-                    if temp_answer and temp_answer.question_id == TEST.questions[PREGUNTA_ACTUAL].id:
-                        correct = temp_answer.isCorrect
-                        if correct:
-                            TEMP_RESULT[token].score += TEST.questions[PREGUNTA_ACTUAL].weight
-                        
-                        temp_stats[token] = [TEST.questions[PREGUNTA_ACTUAL].title, temp_answer.title, correct]
-                        solucion_encontrada = True
-                        break
-
-            if not solucion_encontrada:
-                temp_stats[token] = [TEST.questions[PREGUNTA_ACTUAL].title, "No contestado", False]
-
-        STATS.append(temp_stats)
-        DONE = True
-
-async def save_game(websocket: WebSocket, token: str):
-	global TEST, TEMP_RESULT
-	
-	test = session.query(Test).filter(Test.id == TEST.id).first()
-	if not test:
-		await websocket.send_text(json.dumps({"error": "Test no encontrado"}))
-		return
-	
-	new_game = Game(
-		test_id=TEST.id,
-		playedAt=datetime.now()
-	)
-
-	session.add(new_game)
-	session.flush()
-
-	for token in TEMP_RESULT:
-		player = session.query(Player).filter(Player.name == PLAYERS_TOKEN[token]).first()
-		if not player:
-			await websocket.send_text(json.dumps({"error": "Jugador no encontrado"}))
-			return
-
-		new_result = Result(
-			player_id=player.id,
-			game_id=new_game.id,
-			score=TEMP_RESULT[token].score
-		)
-		session.add(new_result)
-		session.flush()
-
-		for solution in TEMP_RESULT[token].solutions:
-			new_solution = Solution(
-				result_id=new_result.id,
-				question_id=solution.question_id,
-				answer_id=solution.answer_id,
-				time=solution.time
-			)
-			session.add(new_solution)
-
-		session.commit()
-	
-	await websocket.send_text(json.dumps({"status": "Partida guardada correctamente"}))
-	
-	
-
-
-
-
+ADMIN_CONNECTION = None
+PLAYERS_CONNECTIONS = {}
+TEMP_RESULTS = {}
+SUMMARY = []
 
 
 @app.websocket("/play/test={testID}/token={token}")
 async def admin_websocket(websocket: WebSocket, testID: int, token: str):
-	global MODE, PIN, TEST, TOTAL_PREGUNTAS, PREGUNTA_ACTUAL, UPDATE, PLAYERS_TOKEN, TEMP_RESULT, STATS, CONNECTIONS
+	global ADMIN_CONNECTION
 	await websocket.accept()
 
 	try:
 		if not token or token != ADMIN_TOKEN:
 			await websocket.send_text(json.dumps({"error": "Fallo de sesión"}))
 			return
+		
+		await initial_setup(testID)
 
-		MODE = "LOBBY"
-		PIN = await generate_PIN()
-		TEST = await getTest(testID)
-		TOTAL_PREGUNTAS = len(TEST.questions)
-		PREGUNTA_ACTUAL = 0
-		UPDATE = True
-		PLAYERS_TOKEN.clear()
-		TEMP_RESULT.clear()
-		STATS.clear()
-		CONNECTIONS.clear()
 		if not TEST:
 			await websocket.send_text(json.dumps({"error": "Test no encontrado"}))
 			return
 
-		send_task = asyncio.create_task(transmitir(websocket, token))
-		receive_task = asyncio.create_task(recibir(websocket, token))
-		await asyncio.gather(send_task, receive_task)
+		ADMIN_CONNECTION = websocket
+
+		await transmitir_admin()
+		receive_task = asyncio.create_task(recibir_admin())
+		await asyncio.gather(receive_task)
 
 	except (Exception, WebSocketDisconnect) as e:
 		if websocket.client_state != WebSocketState.DISCONNECTED:
 			await websocket.send_text(json.dumps({"error": f"Error: {str(e)}"}))
 
 	finally:
-		pass
+		await close_all_connections()
+		await websocket.close()
 
+async def initial_setup(testID: int):
+	global MODE, PIN, TEST, TOTAL_QUESTIONS, CURRENT_QUESTION, TOTAL_RESPONSES, TIME, RESULTS_CALCULATED, PLAYERS_TOKEN, ADMIN_CONNECTION, PLAYERS_CONNECTIONS, TEMP_RESULTS, SUMMARY
+	
+	MODE = "LOBBY"
+	PIN = await generate_PIN()
+	TEST = await getTest(testID)
+	TOTAL_QUESTIONS = len(TEST.questions)
+	
+	CURRENT_QUESTION = 0
+	TOTAL_RESPONSES = 0
+	TIME = 0
+
+	RESULTS_CALCULATED = False
+
+	ADMIN_CONNECTION = None
+	PLAYERS_TOKEN.clear()
+	PLAYERS_CONNECTIONS.clear()
+	TEMP_RESULTS.clear()
+	SUMMARY.clear()
+
+	return		
 
 async def generate_PIN():
 	return random.randint(100000, 999999)
@@ -1267,11 +973,388 @@ async def getTest(testID: int):
 
 	return response
 
+async def close_all_connections():
+	for _, connection in PLAYERS_CONNECTIONS.items():
+		await connection.close()
 
+async def broadcast():
+	for token, connection in PLAYERS_CONNECTIONS.items():
+		await transmitir_jugadores(websocket=connection, token=token)
+
+async def calculate_results():
+	global TEMP_RESULTS, SUMMARY, RESULTS_CALCULATED
+
+	if not RESULTS_CALCULATED:
+		temp_stats = {}
+
+		for token in TEMP_RESULTS:
+			solucion_encontrada = False
+
+			for solution in TEMP_RESULTS[token].solutions:
+				if TEST.questions[CURRENT_QUESTION].id == solution.question_id:
+					temp_answer = session.query(Answer).filter(Answer.id == solution.answer_id).first()
+
+					if temp_answer and temp_answer.question_id == TEST.questions[CURRENT_QUESTION].id:
+						correct = temp_answer.isCorrect
+						if correct:
+							TEMP_RESULTS[token].score += TEST.questions[CURRENT_QUESTION].weight
+						
+						temp_stats[token] = [TEST.questions[CURRENT_QUESTION].title, temp_answer.title, correct]
+						solucion_encontrada = True
+						break
+
+			if not solucion_encontrada:
+				temp_stats[token] = [TEST.questions[CURRENT_QUESTION].title, "No contestado", False]
+
+		SUMMARY.append(temp_stats)
+		RESULTS_CALCULATED = True
+
+async def transmitir_admin():
+	global MODE, TIME, COUNTDOWN
+	loading_time = 5
+
+	if MODE == "LOBBY":
+		mensaje = {
+			"mode": "LOBBY",
+			"PIN": PIN,
+			"test": TEST.title,
+			"image": TEST.image,
+			"players": list(PLAYERS_TOKEN.values()),
+			"questions": TOTAL_QUESTIONS,
+			"instructions": "Esperando a que los jugadores se unan, enviar 'START' para comenzar la partida"
+		}
+		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+
+		return
+
+	elif MODE == "LOADING":
+		for COUNTDOWN in range(loading_time, 0, -1):
+			mensaje = {
+				"mode": "LOADING",
+				"countdown": COUNTDOWN,
+				"time": TIME
+			}
+			await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+			await broadcast()
+			await asyncio.sleep(1)
+		
+		MODE = "PLAYING"
+		return
+	
+	elif MODE == "PLAYING":
+		Question = TEST.questions[CURRENT_QUESTION]
+		while TIME > 0:
+			mensaje = {
+				"mode": "PLAYING",
+				"question": [
+					{
+						"question_id": Question.id,
+						"question_title": Question.title,
+						"question_image": Question.image,
+						#"question_type": Question.questionType,
+						"question_weight": Question.weight,
+						"question_answers": [
+							{
+								"answers_id": answer.id,
+								"answers_title": answer.title,
+							} for answer in Question.answers
+							]
+					}
+				],
+				"question_current": CURRENT_QUESTION,
+				"question_total": TOTAL_QUESTIONS,
+				"question_time": TIME,
+				"responses": TOTAL_RESPONSES,
+				"players": len(PLAYERS_TOKEN),
+				"instructions": "Puedes ver saltar a los resultados mandando 'SKIP'"
+			}
+			await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+			TIME -= 1
+			await ADMIN_CONNECTION.send_text("--------------------------------------")
+			await ADMIN_CONNECTION.send_text("PLAYERS_TOKEN")
+			await ADMIN_CONNECTION.send_text(json.dumps(PLAYERS_TOKEN))
+			await ADMIN_CONNECTION.send_text("SUMMARY")
+			await ADMIN_CONNECTION.send_text(json.dumps(SUMMARY))
+			await ADMIN_CONNECTION.send_text("TEMP_RESULTS")
+			await ADMIN_CONNECTION.send_text(json.dumps(TEMP_RESULTS))
+			await ADMIN_CONNECTION.send_text("--------------------------------------")
+			await broadcast()
+			await asyncio.sleep(1)
+		
+		await calculate_results()
+		MODE = "RESULTS"
+		return
+
+	elif MODE == "RESULTS":
+		mensaje = {
+			"mode": "RESULTS",
+			"global_score": [
+				{
+					"player": PLAYERS_TOKEN[token],
+					"score": TEMP_RESULTS[token].score
+				} for token in TEMP_RESULTS
+			],
+			"number question": CURRENT_QUESTION,
+			"question": TEST.questions[CURRENT_QUESTION].title,
+			"answers": [
+				{
+					"player": PLAYERS_TOKEN[token],
+					"answer": SUMMARY[CURRENT_QUESTION][token][1],
+					"correct": SUMMARY[CURRENT_QUESTION][token][2]
+				} for token in SUMMARY[CURRENT_QUESTION]
+			],
+			"posible_answers": [
+				{
+					"answers": answer.title,
+					"correct": answer.isCorrect
+				} for answer in TEST.questions[CURRENT_QUESTION].answers
+			],
+			"instructions": "Enviar 'NEXT' para continuar con la siguiente pregunta o 'END' para finalizar la partida"
+
+		}
+		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+		return
+	
+	elif MODE == "END":
+		mensaje = {
+			"mode": "END",
+			"results": [
+				{
+					"player": PLAYERS_TOKEN[token],
+					"score": TEMP_RESULTS[token].score
+				} for token in TEMP_RESULTS
+			],
+			"instructions": "Enviar 'SAVE' para guardar los resultados, para no guardar mande 'CLOSE'"
+		}
+		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+		return
+	
+	else:
+		raise WebSocketDisconnect("Modo no encontrado")
+
+async def recibir_admin():
+	global MODE, CURRENT_QUESTION, TOTAL_RESPONSES, TIME, RESULTS_CALCULATED, TEMP_RESULTS
+
+	tarea_transmitir = None
+	while True:
+		try:
+			data = await asyncio.wait_for(ADMIN_CONNECTION.receive_text(), timeout=1.0)
+		except asyncio.TimeoutError:
+			data = None
+		
+		if MODE == "LOBBY":
+			if data == "START" and len(PLAYERS_TOKEN) > 0:
+				CURRENT_QUESTION = 0
+				TOTAL_RESPONSES = 0
+				TIME = TEST.questions[CURRENT_QUESTION].allocatedTime
+				RESULTS_CALCULATED = False
+
+				await create_player(ADMIN_TOKEN)
+
+				for token, nombre in PLAYERS_TOKEN.items():
+					temp_player = session.query(Player).filter(Player.name == nombre).first()
+					if temp_player:
+						TEMP_RESULTS[token] = JSON_Result_Input(
+							player_id=temp_player.id,
+							score=0,
+							solutions=[]
+						)
+				MODE = "LOADING"
+
+				if tarea_transmitir is None or tarea_transmitir.done():
+					tarea_transmitir = asyncio.create_task(transmitir_admin())
+
+			elif data != None:
+				await ADMIN_CONNECTION.send_text(json.dumps({"error": "No hay jugadores suficientes o el comando es incorrecto"}))
+
+		elif MODE == "PLAYING":
+			if tarea_transmitir is None or tarea_transmitir.done():
+				tarea_transmitir = asyncio.create_task(transmitir_admin())
+
+			if data == "SKIP" or TOTAL_RESPONSES >= len(PLAYERS_TOKEN):
+				TIME = 0
+			
+			elif data != None:
+				await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
+		
+		elif MODE == "RESULTS":
+			if tarea_transmitir is None or tarea_transmitir.done():
+				tarea_transmitir = asyncio.create_task(transmitir_admin())
+
+			if data == "NEXT":
+				CURRENT_QUESTION += 1
+				TOTAL_RESPONSES = 0
+				if CURRENT_QUESTION >= TOTAL_QUESTIONS:
+					MODE = "END"
+				else:
+					TIME = TEST.questions[CURRENT_QUESTION].allocatedTime
+					RESULTS_CALCULATED = False
+
+				if tarea_transmitir is None or tarea_transmitir.done():
+					tarea_transmitir = asyncio.create_task(transmitir_admin())
+			
+			elif data == "END":
+				MODE = "END"
+				
+				if tarea_transmitir is None or tarea_transmitir.done():
+					tarea_transmitir = asyncio.create_task(transmitir_admin())
+			
+			elif data != None:
+				await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
+
+		elif MODE == "END":
+			if tarea_transmitir is None or tarea_transmitir.done():
+				tarea_transmitir = asyncio.create_task(transmitir_admin())
+
+			if data == "SAVE":
+				await save_results()
+				await close_all_connections()
+				await ADMIN_CONNECTION.close()
+				return
+			elif data == "CLOSE":
+				await close_all_connections()
+				await ADMIN_CONNECTION.close()
+				return
+		
+		
+		await asyncio.sleep(1)
+			
+async def save_results():
+	
+	test = session.query(Test).filter(Test.id == TEST.id).first()
+	if not test:
+		await ADMIN_CONNECTION.send_text(json.dumps({"error": "Test no encontrado"}))
+		return
+	
+	new_game = Game(
+		test_id=TEST.id,
+		playedAt=datetime.now()
+	)
+
+	session.add(new_game)
+	session.flush()
+
+	for token in TEMP_RESULTS:
+		player = session.query(Player).filter(Player.name == PLAYERS_TOKEN[token]).first()
+		if not player:
+			await ADMIN_CONNECTION.send_text(json.dumps({"error": "Jugador no encontrado"}))
+			return
+
+		new_result = Result(
+			player_id=player.id,
+			game_id=new_game.id,
+			score=TEMP_RESULTS[token].score
+		)
+		session.add(new_result)
+		session.flush()
+
+		for solution in TEMP_RESULTS[token].solutions:
+			new_solution = Solution(
+				result_id=new_result.id,
+				question_id=solution.question_id,
+				answer_id=solution.answer_id,
+				time=solution.time
+			)
+			session.add(new_solution)
+
+		session.commit()
+	
+	await ADMIN_CONNECTION.send_text(json.dumps({"status": "Partida guardada correctamente"}))
+
+async def transmitir_jugadores(websocket: WebSocket, token: str):
+	if MODE == "LOBBY":
+		mensaje = {
+			"mode": "LOBBY",
+			"name": PLAYERS_TOKEN[token],
+			"token": token
+		}
+		await websocket.send_text(json.dumps(mensaje))
+
+	elif MODE == "LOADING":
+		mensaje = {
+			"mode": "LOADING",
+			"countdown": COUNTDOWN,
+			"time": TIME
+		}
+		await websocket.send_text(json.dumps(mensaje))
+	
+	elif MODE == "PLAYING":
+		Question = TEST.questions[CURRENT_QUESTION]
+		mensaje = {
+			"mode": "PLAYING",
+			"question": [
+				{
+					"question_id": Question.id,
+					"question_title": Question.title,
+					#"question_type": Question.questionType,
+					"question_answers": [
+						{
+							"answers_id": answer.id,
+							"answers_title": answer.title,
+						} for answer in Question.answers
+						]
+				}
+			],
+			"question_time": TIME
+		}
+		await websocket.send_text(json.dumps(mensaje))
+
+	elif MODE == "RESULTS":
+		mensaje = {
+			"mode": "RESULTS",
+			"score": TEMP_RESULTS[token].score,
+			"question": SUMMARY[CURRENT_QUESTION][token][0],
+			"answer": SUMMARY[CURRENT_QUESTION][token][1],
+			"correct": SUMMARY[CURRENT_QUESTION][token][2]
+		}
+
+		await websocket.send_text(json.dumps(mensaje))
+
+	elif MODE == "END":
+		mensaje = {
+			"mode": "END",
+			"score": TEMP_RESULTS[token].score
+		}
+		await websocket.send_text(json.dumps(mensaje))
+
+	else:
+		raise WebSocketDisconnect("Modo no encontrado")
+	
+
+lock = asyncio.Lock()
+
+async def recibir_jugadores(websocket: WebSocket, token: str):
+    global TEMP_RESULTS, TOTAL_RESPONSES, MODE, TIME
+
+    while True:
+        try:
+            data = await websocket.receive_text()
+
+            if MODE == "PLAYING":
+                data_dict = json.loads(data)
+
+                solution_input = JSON_Solution_Input(
+                    question_id=data_dict["question_id"],
+                    answer_id=data_dict["answer_id"],
+                    time=TIME
+                )
+
+                async with lock:
+                    if token in TEMP_RESULTS:
+                        TEMP_RESULTS[token].solutions.append(solution_input)
+                        TOTAL_RESPONSES += 1
+                        await websocket.send_text(json.dumps({"status": "Recibido"}))
+                    else:
+                        print(f"Token {token} no encontrado en TEMP_RESULTS.")
+                        await websocket.send_text(json.dumps({"error": "Token no encontrado"}))
+                
+        except WebSocketDisconnect:
+            print(f"WebSocket desconectado para el token {token}.")
+
+        await asyncio.sleep(1)
 
 @app.websocket("/play/pin={playerPIN}/player={player}")
 async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
-	global MODE, PIN, PLAYERS_TOKEN, UPDATE
 	await websocket.accept()
 
 	try:
@@ -1293,19 +1376,21 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 			await websocket.send_text(json.dumps({"error": "PIN incorrecto"}))
 			await websocket.close()
 			return
-		UPDATE = True
-		CONNECTIONS.append(websocket)
-		send_task = asyncio.create_task(transmitir(websocket, token))
-		receive_task = asyncio.create_task(recibir(websocket, token))
-		await asyncio.gather(send_task, receive_task)
+		
+		await transmitir_admin()
+		await transmitir_jugadores(websocket, token)
+		PLAYERS_CONNECTIONS[token] = websocket
+		receive_task = asyncio.create_task(recibir_jugadores(websocket, token))
+		await receive_task
 
 	except (Exception, WebSocketDisconnect) as e:
 		if websocket.client_state != WebSocketState.DISCONNECTED:
 			await websocket.send_text(json.dumps({"error": f"Error: {str(e)}"}))
 
 	finally:
-		for key, value in list(PLAYERS_TOKEN.items()):
-			if value == player:
-				del PLAYERS_TOKEN[key]
-				UPDATE = True
-				break
+		del PLAYERS_TOKEN[token]
+		del PLAYERS_CONNECTIONS[token]
+		del TEMP_RESULTS[token]
+		for i in range(0, CURRENT_QUESTION):
+			del SUMMARY[i][token]
+		await transmitir_admin()

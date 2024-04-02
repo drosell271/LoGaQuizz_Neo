@@ -156,16 +156,16 @@ function DetalleTest() {
 						<div className="card">
 							<img
 								src={test.image}
-								className="card-img-top"
+								className="card-img-top img-fluid"
+								style={{
+									maxHeight: "150px",
+									objectFit: "cover",
+									width: "100%",
+								}}
 								alt={`Test ${test.title}`}
 								onError={(e) => {
 									e.target.onerror = null;
 									e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
-								}}
-								style={{
-									height: "150px",
-									objectFit: "cover",
-									width: "100%",
 								}}
 							/>
 							<div className="card-body">

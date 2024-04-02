@@ -84,7 +84,7 @@ function EditTest() {
 					allocatedTime: 30,
 					weight: 1,
 					answers: [
-						{ title: "", isCorrect: false },
+						{ title: "", isCorrect: true },
 						{ title: "", isCorrect: false },
 					],
 				},
@@ -145,34 +145,34 @@ function EditTest() {
 
 	const isValidForm = () => {
 		if (!formData.title.trim()) {
-			console.log("El título del test está vacío.");
+			//console.log("El título del test está vacío.");
 			return false;
 		}
 
 		for (const question of formData.questions) {
 			if (!question.title.trim()) {
-				console.log("El título de la pregunta está vacío.");
+				//console.log("El título de la pregunta está vacío.");
 				return false;
 			}
 
 			if (question.allocatedTime <= 10 || question.weight <= 0) {
-				console.log(
+				/*console.log(
 					"El tiempo asignado o el peso de la pregunta no es válido."
-				);
+				);*/
 				return false;
 			}
 
 			if (question.answers.length < 2) {
-				console.log("No hay suficientes respuestas para la pregunta.");
+				//console.log("No hay suficientes respuestas para la pregunta.");
 				return false;
 			}
 
 			let correctAnswerFound = false;
 			for (const answer of question.answers) {
 				if (!answer.title.trim()) {
-					console.log(
+					/*console.log(
 						"Una respuesta marcada como correcta está vacía."
-					);
+					);*/
 					return false;
 				}
 
@@ -182,9 +182,9 @@ function EditTest() {
 			}
 
 			if (!correctAnswerFound) {
-				console.log(
+				/*console.log(
 					"No se encontró ninguna respuesta correcta para la pregunta."
-				);
+				);*/
 				return false;
 			}
 		}
