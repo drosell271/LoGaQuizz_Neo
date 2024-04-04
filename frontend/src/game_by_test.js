@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 
 function GameDetail() {
 	const [gameData, setGameData] = useState(null);
+	const [totalPlayers, setTotalPlayers] = useState(0);
+	const [maxPoints, setMaxPoints] = useState(0);
 	const navigate = useNavigate();
 	const { testid, gameid } = useParams();
 	const token = localStorage.getItem("token");
@@ -17,6 +19,15 @@ function GameDetail() {
 					throw new Error("Network response was not ok");
 				}
 				const data = await response.json();
+				let totalPlayers = data.games[0].results.length;
+				const puntuacionMaxima = data.questions.reduce(
+					(acc, current) => {
+						return acc + current.weight;
+					},
+					0
+				);
+				setMaxPoints(puntuacionMaxima);
+				setTotalPlayers(totalPlayers);
 				setGameData(data);
 			} catch (error) {
 				console.error("Error:", error);
@@ -26,7 +37,6 @@ function GameDetail() {
 		fetchGameData();
 	}, [testid, gameid, token]);
 
-	// Función para contar respuestas de jugadores por pregunta y respuesta
 	const countAnswers = (questionId, answerId) => {
 		if (!gameData || !gameData.games) return 0;
 
@@ -63,108 +73,357 @@ function GameDetail() {
 	};
 
 	const navigateToPlayer = (playerId) => {
-		navigate(`/menu/player/${playerId}`);
+		navigate(`/menu/player/${playerId}/game/${gameid}`);
 	};
 
-	const handleLogout = () => {
-		localStorage.removeItem("token");
-		navigate("/login");
+	function calculatePercentage(questionId, answerId, totalPlayers) {
+		const count = countAnswers(questionId, answerId); // Asumiendo que ya tienes esta función
+		return (count / totalPlayers) * 100;
+	}
+
+	function calculatePercentageNoAnswer(answers, questionId, totalPlayers) {
+		let countAnswered = answers.reduce((total, answer) => {
+			return total + countAnswers(questionId, answer.id);
+		}, 0);
+
+		const countNoAnswer = totalPlayers - countAnswered;
+		return (countNoAnswer / totalPlayers) * 100;
+	}
+
+	function calculateTotalAnswered(answers, questionId) {
+		return answers.reduce((total, answer) => {
+			return total + countAnswers(questionId, answer.id);
+		}, 0);
+	}
+	const [sortedResults, setSortedResults] = useState([]);
+	const [orderDirection, setOrderDirection] = useState({
+		player_name: "desc",
+		score: null,
+	});
+
+	useEffect(() => {
+		const fetchGameData = async () => {
+			try {
+				const response = await fetch(
+					`http://localhost:8000/results/test/${testid}/game/${gameid}/token=${token}`
+				);
+				if (!response.ok) {
+					throw new Error("Network response was not ok");
+				}
+				const data = await response.json();
+				setGameData(data);
+				setSortedResults(
+					data.games[0].results.sort((a, b) => {
+						// Ordenación inicial por 'player_name' en orden descendente alfabético
+						return b.player_name.localeCompare(a.player_name);
+					})
+				);
+			} catch (error) {
+				console.error("Error:", error);
+			}
+		};
+
+		fetchGameData();
+	}, [testid, gameid, token]);
+
+	const handleSort = (field) => {
+		const isSameField = orderDirection[field];
+		const isAscending = isSameField !== "asc";
+
+		setOrderDirection({
+			player_name:
+				field === "player_name" ? (isAscending ? "asc" : "desc") : null,
+			score: field === "score" ? (isAscending ? "asc" : "desc") : null,
+		});
+
+		const sorted = [...sortedResults].sort((a, b) => {
+			let comparison = 0;
+			if (field === "player_name") {
+				comparison = a[field].localeCompare(b[field]);
+			} else if (field === "score") {
+				comparison = a[field] - b[field];
+			}
+			return isAscending ? comparison : -comparison;
+		});
+		setSortedResults(sorted);
+	};
+
+	const handgleReturn = () => {
+		navigate(-1);
 	};
 
 	return (
 		<div className="container-fluid">
-			<nav className="navbar navbar-expand-lg navbar-light bg-light">
+			{""}
+			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+				<a className="navbar-brand" href="#">
+					<img
+						src={`${process.env.PUBLIC_URL}/logo.png`}
+						alt="Logo"
+						height="30"
+					/>
+				</a>
+				<div className="navbar-nav">
+					<a
+						href="#"
+						onClick={() => navigate("/menu/test")}
+						className="nav-link"
+					>
+						Test
+					</a>
+					<a
+						href="#"
+						onClick={() => navigate("/menu/players")}
+						className="nav-link"
+					>
+						Jugadores
+					</a>
+				</div>
 				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/test")}
+					className="btn btn-danger ms-auto"
+					onClick={() => {
+						localStorage.removeItem("token");
+						navigate("/login");
+					}}
 				>
-					Test
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/players")}
-				>
-					Jugadores
-				</button>
-				<button
-					className="btn btn-link"
-					onClick={() => navigate("/menu/games")}
-				>
-					Juegos
-				</button>
-				<button className="btn btn-link" onClick={handleLogout}>
 					Logout
 				</button>
 			</nav>
 
-			<div className="container mt-4">
-				{gameData ? (
-					<div>
-						<h2>{gameData.title}</h2>
-						<img
-							src={gameData.image}
-							alt={gameData.title}
-							className="img-fluid"
-						/>
-						<h3>Preguntas:</h3>
-						{gameData.questions.map((question) => (
-							<div key={question.id} className="mb-3">
-								<h4>{question.title}</h4>
-								<img
-									src={question.image}
-									alt={question.title}
-									className="img-fluid"
-								/>
-								<p>
-									Tiempo asignado: {question.allocatedTime}s,
-									Peso: {question.weight}
-								</p>
-								<ul>
-									{question.answers.map((answer) => (
-										<li
-											key={answer.id}
-											className={
-												answer.isCorrect
-													? "text-success"
-													: ""
+			<div className="row">
+				<aside className="col-md-2 d-flex flex-column">
+					<button
+						className="btn btn-danger mb-3"
+						onClick={handleDeleteGame}
+					>
+						Eliminar Juego
+					</button>
+					<button
+						className="btn btn-secondary mb-3"
+						onClick={handgleReturn}
+					>
+						Volver
+					</button>
+				</aside>
+				<section className="col-md-10">
+					{gameData ? (
+						<div className="card">
+							<img
+								src={gameData.image}
+								className="card-img-top img-fluid"
+								style={{
+									maxHeight: "150px",
+									objectFit: "cover",
+									width: "100%",
+								}}
+								alt={`Juego ${gameData.title}`}
+							/>
+							<div className="card-body">
+								<h2 className="card-title">{gameData.title}</h2>
+								<br />
+								{gameData.questions.map((question) => (
+									<div key={question.id} className="mb-3">
+										<h4>{question.title}</h4>
+										<div
+											className="d-flex"
+											style={{
+												backgroundColor: "#f8f9fa",
+												borderRadius: "10px",
+											}}
+										>
+											<div
+												className="me-3"
+												style={{
+													backgroundImage: `url(${question.image}), url(${process.env.PUBLIC_URL}/default-banner.png)`,
+													backgroundSize: "cover",
+													backgroundPosition:
+														"center",
+													borderTopLeftRadius: "10px",
+													borderBottomLeftRadius:
+														"10px",
+													width: "100px",
+													minHeight: "150px",
+												}}
+											></div>
+											<div
+												style={{
+													flex: 1,
+													padding: "10px",
+												}}
+											>
+												<p>
+													Tiempo:{" "}
+													{question.allocatedTime}
+													s&nbsp; Peso:{" "}
+													{question.weight}
+												</p>
+												<ul>
+													{question.answers.map(
+														(answer) => (
+															<li
+																key={answer.id}
+																className="my-2"
+															>
+																<div className="d-flex justify-content-between">
+																	<span
+																		className={
+																			answer.isCorrect
+																				? "text-success"
+																				: ""
+																		}
+																	>
+																		{
+																			answer.title
+																		}{" "}
+																		{answer.isCorrect && (
+																			<span>
+																				(Correcta)
+																			</span>
+																		)}
+																	</span>
+																	<span>
+																		{countAnswers(
+																			question.id,
+																			answer.id
+																		)}
+																	</span>
+																</div>
+																<div className="progress">
+																	<div
+																		className={`progress-bar ${
+																			answer.isCorrect
+																				? "bg-success"
+																				: "bg-danger"
+																		}`}
+																		role="progressbar"
+																		style={{
+																			width: `${calculatePercentage(
+																				question.id,
+																				answer.id,
+																				totalPlayers
+																			)}%`,
+																		}}
+																		aria-valuenow={calculatePercentage(
+																			question.id,
+																			answer.id,
+																			totalPlayers
+																		)}
+																		aria-valuemin="0"
+																		aria-valuemax="100"
+																	></div>
+																</div>
+															</li>
+														)
+													)}
+													<li className="my-2">
+														<div className="d-flex justify-content-between">
+															<span>
+																No Contestado
+															</span>
+															<span>
+																{totalPlayers -
+																	calculateTotalAnswered(
+																		question.answers,
+																		question.id
+																	)}
+															</span>
+														</div>
+														<div className="progress">
+															<div
+																className="progress-bar bg-danger"
+																role="progressbar"
+																style={{
+																	width: `${calculatePercentageNoAnswer(
+																		question.answers,
+																		question.id,
+																		totalPlayers
+																	)}%`,
+																}}
+																aria-valuenow={calculatePercentageNoAnswer(
+																	question.answers,
+																	question.id,
+																	totalPlayers
+																)}
+																aria-valuemin="0"
+																aria-valuemax="100"
+															></div>
+														</div>
+													</li>
+												</ul>
+											</div>
+										</div>
+									</div>
+								))}
+								<h3 className="mt-4">Jugadores:</h3>
+								<div className="card mb-2">
+									<div className="card-header d-flex justify-content-between">
+										<span
+											className="clickable"
+											onClick={() =>
+												handleSort("player_name")
 											}
 										>
-											{answer.title} - Respuestas:{" "}
-											{countAnswers(
-												question.id,
-												answer.id
-											)}
-										</li>
-									))}
-								</ul>
-							</div>
-						))}
-						<h3>Jugadores:</h3>
-						{gameData.games.map((game) => (
-							<div key={game.id} className="mb-3">
-								{game.results.map((result) => (
-									<p
-										key={result.id}
-										onClick={() =>
-											navigateToPlayer(result.player_id)
-										}
-									>
-										{result.player_name} - Puntuación:{" "}
-										{result.score}
-									</p>
+											Nombre
+											{orderDirection.player_name ===
+											"asc"
+												? "↑"
+												: orderDirection.player_name ===
+												  "desc"
+												? "↓"
+												: ""}
+										</span>
+										<span
+											className="clickable"
+											onClick={() => handleSort("score")}
+										>
+											Puntuación
+											{orderDirection.score === "asc"
+												? "↑"
+												: orderDirection.score ===
+												  "desc"
+												? "↓"
+												: ""}
+											<br />
+											Max: {maxPoints}
+										</span>
+										<span>Acciones</span>
+									</div>
+								</div>
+								{sortedResults.map((result) => (
+									<div className="card mb-2" key={result.id}>
+										<div className="card-body d-flex justify-content-between align-items-center">
+											<span className="clickable">
+												{result.player_name}
+											</span>
+											<span
+												className={`ml-auto ${
+													result.score >=
+													maxPoints / 2
+														? "text-success"
+														: "text-danger"
+												}`}
+											>
+												{result.score}
+											</span>
+											<button
+												className="btn btn-info ms-2"
+												onClick={() =>
+													navigateToPlayer(
+														result.player_id
+													)
+												}
+											>
+												Info
+											</button>
+										</div>
+									</div>
 								))}
 							</div>
-						))}
-						<button
-							className="btn btn-danger mt-3"
-							onClick={handleDeleteGame}
-						>
-							Eliminar Juego
-						</button>
-					</div>
-				) : (
-					<p>Cargando datos del juego...</p>
-				)}
+						</div>
+					) : (
+						<p>Cargando datos del juego...</p>
+					)}
+				</section>
 			</div>
 		</div>
 	);

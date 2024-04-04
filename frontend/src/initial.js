@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Login() {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
+function Initial() {
+	const [pin, setUsername] = useState("");
+	const [name, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const navigate = useNavigate();
 
@@ -17,7 +17,7 @@ function Login() {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ username, password }),
+				body: JSON.stringify({ pin, name }),
 			});
 
 			const data = await response.json();
@@ -44,37 +44,35 @@ function Login() {
 				{/* Ajusta el margen inferior como sea necesario */}
 				<div className="card-body">
 					<form onSubmit={handleSubmit}>
-						<h3 className="card-title text-center mb-3">
-							Iniciar Sesión
-						</h3>
+						<h3 className="card-title text-center mb-3">Jugar</h3>
 
 						{/* Campo Usuario */}
 						<div className="mb-3">
-							<label htmlFor="username" className="form-label">
-								Usuario
+							<label htmlFor="Pin" className="form-label">
+								Pin
 							</label>
 							<input
 								type="text"
 								className="form-control"
-								id="username"
-								value={username}
+								id="pin"
+								value={pin}
 								onChange={(e) => setUsername(e.target.value)}
-								placeholder="Usuario"
+								placeholder="PIN"
 							/>
 						</div>
 
 						{/* Campo Contraseña */}
 						<div className="mb-4">
-							<label htmlFor="password" className="form-label">
-								Contraseña
+							<label htmlFor="name" className="form-label">
+								Nombre
 							</label>
 							<input
-								type="password"
+								type="text"
 								className="form-control"
-								id="password"
-								value={password}
+								id="name"
+								value={name}
 								onChange={(e) => setPassword(e.target.value)}
-								placeholder="Contraseña"
+								placeholder="Nombre"
 							/>
 						</div>
 
@@ -82,14 +80,7 @@ function Login() {
 							type="submit"
 							className="btn btn-primary w-100 mb-2"
 						>
-							Iniciar Sesión
-						</button>
-
-						<button
-							className="btn btn-secondary w-100 mb-2"
-							onClick={handgleReturn}
-						>
-							Volver
+							Entrar
 						</button>
 					</form>
 				</div>
@@ -106,4 +97,4 @@ function Login() {
 	);
 }
 
-export default Login;
+export default Initial;

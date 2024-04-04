@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 
 function TestResults() {
 	const [testResults, setTestResults] = useState([]);
+	const [testName, setTestName] = useState("");
 	const navigate = useNavigate();
 	const { id } = useParams(); // id del test
 	const token = localStorage.getItem("token");
@@ -20,6 +21,7 @@ function TestResults() {
 				throw new Error("Network response was not ok");
 			}
 			const data = await response.json();
+			setTestName(data.title || "Test"); // Actualizas el estado del nombre del test
 			setTestResults(data.games || []);
 		} catch (error) {
 			console.error("Error:", error);
@@ -51,9 +53,8 @@ function TestResults() {
 		navigate(`/menu/test/${id}/game/${gameId}`);
 	};
 
-	const handleLogout = () => {
-		localStorage.removeItem("token");
-		navigate("/login");
+	const handgleReturn = () => {
+		navigate(-1);
 	};
 
 	return (
@@ -93,14 +94,22 @@ function TestResults() {
 					Logout
 				</button>
 			</nav>
+			<div className="row">
+				<aside className="col-md-2 d-flex flex-column">
+					<button
+						className="btn btn-secondary mb-3"
+						onClick={handgleReturn}
+					>
+						Volver
+					</button>
+				</aside>
 
-			<div className="container mt-4">
-				<h2>Resultados del Test</h2>
-				<div className="row">
+				<section className="col-md-10">
+					<h2>Resultados de: {testName}</h2>
 					{testResults.map((game) => (
 						<div key={game.id} className="col-md-4 mb-3">
 							<div className="card h-100">
-								<div className="card-body">
+								<div className="card-body d-flex flex-column">
 									<h5 className="card-title">
 										Jugado:{" "}
 										{new Date(
@@ -110,23 +119,29 @@ function TestResults() {
 									<p className="card-text">
 										Número de jugadores: {game.players}
 									</p>
-									<button
-										className="btn btn-primary mb-2"
-										onClick={() => handleMoreClick(game.id)}
-									>
-										Más
-									</button>
-									<button
-										className="btn btn-danger"
-										onClick={() => handleDelete(game.id)}
-									>
-										Borrar
-									</button>
+									<div className="mt-auto d-flex justify-content-between">
+										<button
+											className="btn btn-primary"
+											onClick={() =>
+												handleMoreClick(game.id)
+											}
+										>
+											Más
+										</button>
+										<button
+											className="btn btn-danger"
+											onClick={() =>
+												handleDelete(game.id)
+											}
+										>
+											Borrar
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
 					))}
-				</div>
+				</section>
 			</div>
 		</div>
 	);

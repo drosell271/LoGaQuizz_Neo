@@ -13,6 +13,7 @@ import PlayerSummary from "./player_summary";
 import TestSummary from "./test_summary";
 import TestGameDetails from "./game_by_test";
 import PlayerGameDetails from "./game_by_player";
+import Initial from "./initial";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -20,6 +21,7 @@ root.render(
 	<React.StrictMode>
 		<BrowserRouter>
 			<Routes>
+				<Route path="/" element={<Initial />} />
 				<Route path="/login" element={<Login />} />
 				<Route path="/menu/test" element={<MenuTest />} />
 				<Route path="/menu/players" element={<MenuJugadores />} />

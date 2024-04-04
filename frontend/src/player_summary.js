@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 function PlayerResults() {
-	const [results, setResults] = useState([]);
+	const [tests, setTests] = useState([]);
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const token = localStorage.getItem("token");
@@ -17,7 +17,7 @@ function PlayerResults() {
 					throw new Error("Network response was not ok");
 				}
 				const data = await response.json();
-				setResults(data);
+				setTests(data);
 			} catch (error) {
 				console.error("Error:", error);
 			}
@@ -30,86 +30,138 @@ function PlayerResults() {
 		navigate(`/menu/player/${playerId}/game/${gameId}`);
 	};
 
-	const handleLogout = () => {
-		localStorage.removeItem("token");
-		navigate("/login");
+	const handgleReturn = () => {
+		navigate(-1);
 	};
+
+	let playerName = "Jugador Desconocido";
+	if (
+		tests.length > 0 &&
+		tests[0].games &&
+		tests[0].games.length > 0 &&
+		tests[0].games[0].results &&
+		tests[0].games[0].results.length > 0
+	) {
+		playerName = tests[0].games[0].results[0].player_name;
+	}
 
 	return (
 		<div className="container-fluid">
-			<nav className="navbar navbar-expand-lg navbar-light bg-light">
-				<div className="container-fluid">
-					<button
-						className="btn btn-link"
+			<nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+				<a className="navbar-brand" href="#">
+					<img
+						src={`${process.env.PUBLIC_URL}/logo.png`}
+						alt="Logo"
+						height="30"
+					/>
+				</a>
+				<div className="navbar-nav">
+					<a
+						href="#"
 						onClick={() => navigate("/menu/test")}
+						className="nav-link"
 					>
 						Test
-					</button>
-					<button
-						className="btn btn-link"
+					</a>
+					<a
+						href="#"
 						onClick={() => navigate("/menu/players")}
+						className="nav-link"
 					>
 						Jugadores
-					</button>
-					<button
-						className="btn btn-link"
-						onClick={() => navigate("/menu/games")}
-					>
-						Juegos
-					</button>
-					<button className="btn btn-link" onClick={handleLogout}>
-						Logout
-					</button>
+					</a>
 				</div>
+				<button
+					className="btn btn-danger ms-auto"
+					onClick={() => {
+						localStorage.removeItem("token");
+						navigate("/login");
+					}}
+				>
+					Logout
+				</button>
 			</nav>
 
-			<div className="container mt-4">
-				<h2>Resultados del Jugador</h2>
-				<div className="row">
-					{results.map((result) => (
-						<div key={result.id} className="col-md-4 mb-3">
-							<div className="card h-100">
-								<img
-									src={result.image}
-									className="card-img-top"
-									alt={`Test ${result.title}`}
-								/>
-								<div className="card-body">
-									<h5 className="card-title">
-										{result.title}
-									</h5>
-									{result.games.map((game) => (
-										<div key={game.id}>
-											<p className="card-text">
+			<div className="row">
+				<aside className="col-md-2 d-flex flex-column">
+					<button
+						className="btn btn-secondary mb-3"
+						onClick={handgleReturn}
+					>
+						Volver
+					</button>
+				</aside>
+
+				<section className="col-md-10">
+					<h2>Resultados de: {playerName}</h2>
+					<div className="row">
+						{tests.map((test) =>
+							test.games.map((game) => (
+								<div
+									key={game.id}
+									className="col-sm-6 col-md-4 col-lg-3 mb-3"
+								>
+									<div
+										className="card h-100"
+										style={{ paddingBottom: "0.5rem" }}
+									>
+										<img
+											src={
+												test.image ||
+												`${process.env.PUBLIC_URL}/default-banner.png`
+											}
+											className="card-img-top img-fluid"
+											style={{
+												maxHeight: "150px",
+												objectFit: "cover",
+											}}
+											alt={`Test ${test.title}`}
+											onError={(e) => {
+												e.target.onerror = null;
+												e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
+											}}
+										/>
+										<div
+											className="card-body d-flex flex-column"
+											style={{ padding: "0.5rem" }}
+										>
+											<h5
+												className="card-title"
+												style={{ fontSize: "1rem" }}
+											>
+												{test.title}
+											</h5>
+											<p
+												className="card-text"
+												style={{
+													marginBottom: "0.5rem",
+												}}
+											>
 												Jugado:{" "}
 												{new Date(
 													game.playedAt
 												).toLocaleDateString()}
 											</p>
-											{game.results.map((gameResult) => (
-												<p
-													key={gameResult.id}
-													className="card-text"
+											<div className="mt-auto d-flex justify-content-between">
+												<button
+													className="btn btn-primary"
+													onClick={() =>
+														handleMoreClick(
+															test.id,
+															game.id
+														)
+													}
 												>
-													Puntuación:{" "}
-													{gameResult.score}
-												</p>
-											))}
-											<button
-												className="btn btn-primary"
-												onClick={() =>
-													handleMoreClick(id, game.id)
-												}
-											>
-												Más
-											</button>
+													Más
+												</button>
+											</div>
 										</div>
-									))}
+									</div>
 								</div>
-							</div>
-						</div>
-					))}
-				</div>
+							))
+						)}
+					</div>
+				</section>
 			</div>
 		</div>
 	);

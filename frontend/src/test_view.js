@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 
 function DetalleTest() {
 	const [test, setTest] = useState(null);
+	const [maxPoints, setMaxPoints] = useState(0);
 	const navigate = useNavigate();
 	const { id } = useParams();
 	const token = localStorage.getItem("token");
@@ -16,6 +17,10 @@ function DetalleTest() {
 				throw new Error("Error al cargar el test");
 			}
 			const data = await response.json();
+			const puntuacionMaxima = data.questions.reduce((acc, current) => {
+				return acc + current.weight;
+			}, 0);
+			setMaxPoints(puntuacionMaxima);
 			setTest(data);
 		} catch (error) {
 			console.error(error.message);
@@ -76,6 +81,11 @@ function DetalleTest() {
 		console.log("Jugar ha sido clickeado");
 		console.log("test state", test, test.archiv);
 	};
+
+	const handgleReturn = () => {
+		navigate(-1);
+	};
+
 	return (
 		<div className="container-fluid">
 			{""}
@@ -149,6 +159,12 @@ function DetalleTest() {
 					>
 						Eliminar
 					</button>
+					<button
+						className="btn btn-secondary mb-3"
+						onClick={handgleReturn}
+					>
+						Volver
+					</button>
 				</aside>
 
 				<section className="col-md-10">
@@ -184,6 +200,9 @@ function DetalleTest() {
 									{new Date(
 										test.updatedAt
 									).toLocaleDateString()}
+								</p>
+								<p className="card-text">
+									Puntuación máxima: {maxPoints}
 								</p>
 								<br />
 								<h5 className="mt-4 mb-4">Preguntas:</h5>
