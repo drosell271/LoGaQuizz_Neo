@@ -871,6 +871,7 @@ TIME = 0
 COUNTDOWN = 0
 
 RESULTS_CALCULATED = False
+TAREA_TRANSMITIR = None
 
 ADMIN_CONNECTION = None
 PLAYERS_CONNECTIONS = {}
@@ -880,7 +881,7 @@ SUMMARY = []
 
 @app.websocket("/play/test={testID}/token={token}")
 async def admin_websocket(websocket: WebSocket, testID: int, token: str):
-	global ADMIN_CONNECTION
+	global ADMIN_CONNECTION, TAREA_TRANSMITIR
 	await websocket.accept()
 
 	try:
@@ -896,7 +897,8 @@ async def admin_websocket(websocket: WebSocket, testID: int, token: str):
 
 		ADMIN_CONNECTION = websocket
 
-		await transmitir_admin()
+		if TAREA_TRANSMITIR is None or TAREA_TRANSMITIR.done():
+			TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
 		receive_task = asyncio.create_task(recibir_admin())
 		await asyncio.gather(receive_task)
 
@@ -1039,9 +1041,7 @@ async def transmitir_admin():
 			await asyncio.sleep(1)
 		
 		MODE = "PLAYING"
-		return
-	
-	elif MODE == "PLAYING":
+
 		Question = TEST.questions[CURRENT_QUESTION]
 		while TIME > 0:
 			mensaje = {
@@ -1068,24 +1068,15 @@ async def transmitir_admin():
 				"players": len(PLAYERS_TOKEN),
 				"instructions": "Puedes ver saltar a los resultados mandando 'SKIP'"
 			}
+			
 			await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
 			TIME -= 1
-			await ADMIN_CONNECTION.send_text("--------------------------------------")
-			await ADMIN_CONNECTION.send_text("PLAYERS_TOKEN")
-			await ADMIN_CONNECTION.send_text(json.dumps(PLAYERS_TOKEN))
-			await ADMIN_CONNECTION.send_text("SUMMARY")
-			await ADMIN_CONNECTION.send_text(json.dumps(SUMMARY))
-			await ADMIN_CONNECTION.send_text("TEMP_RESULTS")
-			await ADMIN_CONNECTION.send_text(json.dumps(TEMP_RESULTS))
-			await ADMIN_CONNECTION.send_text("--------------------------------------")
 			await broadcast()
 			await asyncio.sleep(1)
 		
 		await calculate_results()
 		MODE = "RESULTS"
-		return
 
-	elif MODE == "RESULTS":
 		mensaje = {
 			"mode": "RESULTS",
 			"global_score": [
@@ -1113,6 +1104,7 @@ async def transmitir_admin():
 
 		}
 		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+		await broadcast()
 		return
 	
 	elif MODE == "END":
@@ -1133,91 +1125,94 @@ async def transmitir_admin():
 		raise WebSocketDisconnect("Modo no encontrado")
 
 async def recibir_admin():
-	global MODE, CURRENT_QUESTION, TOTAL_RESPONSES, TIME, RESULTS_CALCULATED, TEMP_RESULTS
+	global MODE, CURRENT_QUESTION, TOTAL_RESPONSES, TIME, RESULTS_CALCULATED, TEMP_RESULTS, TAREA_TRANSMITIR
 
-	tarea_transmitir = None
+	
 	while True:
 		try:
 			data = await asyncio.wait_for(ADMIN_CONNECTION.receive_text(), timeout=1.0)
 		except asyncio.TimeoutError:
 			data = None
 		
-		if MODE == "LOBBY":
-			if data == "START" and len(PLAYERS_TOKEN) > 0:
-				CURRENT_QUESTION = 0
-				TOTAL_RESPONSES = 0
-				TIME = TEST.questions[CURRENT_QUESTION].allocatedTime
-				RESULTS_CALCULATED = False
-
-				await create_player(ADMIN_TOKEN)
-
-				for token, nombre in PLAYERS_TOKEN.items():
-					temp_player = session.query(Player).filter(Player.name == nombre).first()
-					if temp_player:
-						TEMP_RESULTS[token] = JSON_Result_Input(
-							player_id=temp_player.id,
-							score=0,
-							solutions=[]
-						)
-				MODE = "LOADING"
-
-				if tarea_transmitir is None or tarea_transmitir.done():
-					tarea_transmitir = asyncio.create_task(transmitir_admin())
-
-			elif data != None:
-				await ADMIN_CONNECTION.send_text(json.dumps({"error": "No hay jugadores suficientes o el comando es incorrecto"}))
-
-		elif MODE == "PLAYING":
-			if tarea_transmitir is None or tarea_transmitir.done():
-				tarea_transmitir = asyncio.create_task(transmitir_admin())
-
-			if data == "SKIP" or TOTAL_RESPONSES >= len(PLAYERS_TOKEN):
-				TIME = 0
-			
-			elif data != None:
-				await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
-		
-		elif MODE == "RESULTS":
-			if tarea_transmitir is None or tarea_transmitir.done():
-				tarea_transmitir = asyncio.create_task(transmitir_admin())
-
-			if data == "NEXT":
-				CURRENT_QUESTION += 1
-				TOTAL_RESPONSES = 0
-				if CURRENT_QUESTION >= TOTAL_QUESTIONS:
-					MODE = "END"
-				else:
+		if data != None:
+			if MODE == "LOBBY":
+				if data == "START" and len(PLAYERS_TOKEN) > 0:
+					CURRENT_QUESTION = 0
+					TOTAL_RESPONSES = 0
 					TIME = TEST.questions[CURRENT_QUESTION].allocatedTime
 					RESULTS_CALCULATED = False
 
-				if tarea_transmitir is None or tarea_transmitir.done():
-					tarea_transmitir = asyncio.create_task(transmitir_admin())
-			
-			elif data == "END":
-				MODE = "END"
+					await create_player(ADMIN_TOKEN)
+
+					for token, nombre in PLAYERS_TOKEN.items():
+						temp_player = session.query(Player).filter(Player.name == nombre).first()
+						if temp_player:
+							TEMP_RESULTS[token] = JSON_Result_Input(
+								player_id=temp_player.id,
+								score=0,
+								solutions=[]
+							)
+					MODE = "LOADING"
+
+					if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+
+					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
+				elif data != None:
+					await ADMIN_CONNECTION.send_text(json.dumps({"error": "No hay jugadores suficientes o el comando es incorrecto"}))
+
+			elif MODE == "PLAYING":
+				if data == "SKIP":
+					TIME = 0
 				
-				if tarea_transmitir is None or tarea_transmitir.done():
-					tarea_transmitir = asyncio.create_task(transmitir_admin())
+				elif data != None:
+					await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
 			
-			elif data != None:
-				await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
+			elif MODE == "RESULTS":
+				if data == "NEXT":
+					CURRENT_QUESTION += 1
+					TOTAL_RESPONSES = 0
+					if CURRENT_QUESTION >= TOTAL_QUESTIONS:
+						MODE = "END"
+					else:
+						TIME = TEST.questions[CURRENT_QUESTION].allocatedTime
+						RESULTS_CALCULATED = False
+						MODE = "LOADING"
 
-		elif MODE == "END":
-			if tarea_transmitir is None or tarea_transmitir.done():
-				tarea_transmitir = asyncio.create_task(transmitir_admin())
+					
+					if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+					
+					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+				
+				elif data == "END":
+					MODE = "END"
+					
+					if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+					
+					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+				
+				elif data != None:
+					await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
 
-			if data == "SAVE":
-				await save_results()
-				await close_all_connections()
-				await ADMIN_CONNECTION.close()
-				return
-			elif data == "CLOSE":
-				await close_all_connections()
-				await ADMIN_CONNECTION.close()
-				return
+			elif MODE == "END":
+				if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+					
+				TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
+				if data == "SAVE":
+					await save_results()
+					await close_all_connections()
+					await ADMIN_CONNECTION.close()
+					return
+				elif data == "CLOSE":
+					await close_all_connections()
+					await ADMIN_CONNECTION.close()
+					return
 		
-		
-		await asyncio.sleep(1)
 			
 async def save_results():
 	
@@ -1324,38 +1319,48 @@ async def transmitir_jugadores(websocket: WebSocket, token: str):
 lock = asyncio.Lock()
 
 async def recibir_jugadores(websocket: WebSocket, token: str):
-    global TEMP_RESULTS, TOTAL_RESPONSES, MODE, TIME
+	global TEMP_RESULTS, TOTAL_RESPONSES, MODE, TIME
 
-    while True:
-        try:
-            data = await websocket.receive_text()
+	while True:
+		try:
+			data = await websocket.receive_text()
 
-            if MODE == "PLAYING":
-                data_dict = json.loads(data)
+			if MODE == "PLAYING":
+				data_dict = json.loads(data)
 
-                solution_input = JSON_Solution_Input(
-                    question_id=data_dict["question_id"],
-                    answer_id=data_dict["answer_id"],
-                    time=TIME
-                )
+				solution_input = JSON_Solution_Input(
+					question_id=data_dict["question_id"],
+					answer_id=data_dict["answer_id"],
+					time=TIME
+				)
 
-                async with lock:
-                    if token in TEMP_RESULTS:
-                        TEMP_RESULTS[token].solutions.append(solution_input)
-                        TOTAL_RESPONSES += 1
-                        await websocket.send_text(json.dumps({"status": "Recibido"}))
-                    else:
-                        print(f"Token {token} no encontrado en TEMP_RESULTS.")
-                        await websocket.send_text(json.dumps({"error": "Token no encontrado"}))
-                
-        except WebSocketDisconnect:
-            print(f"WebSocket desconectado para el token {token}.")
+				async with lock:
+					if token in TEMP_RESULTS:
+						TEMP_RESULTS[token].solutions.append(solution_input)
+						TOTAL_RESPONSES += 1
+						
+						if TOTAL_RESPONSES >= len(PLAYERS_TOKEN):
+							TIME = 0
 
-        await asyncio.sleep(1)
+						await websocket.send_text(json.dumps({"status": "Recibido"}))
+					else:
+						print(f"Token {token} no encontrado en TEMP_RESULTS.")
+						await websocket.send_text(json.dumps({"error": "Token no encontrado"}))
+				
+		except WebSocketDisconnect:
+			print(f"WebSocket desconectado para el token {token}.")
+
+		await asyncio.sleep(1)
 
 @app.websocket("/play/pin={playerPIN}/player={player}")
 async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
+	global PLAYERS_TOKEN, PLAYERS_CONNECTIONS, TEMP_RESULTS, SUMMARY, TAREA_TRANSMITIR
 	await websocket.accept()
+	
+	if ADMIN_CONNECTION is None or MODE != "LOBBY":
+		await websocket.send_text(json.dumps({"error": "No hay partida disponible"}))
+		await websocket.close()
+		return
 
 	try:
 
@@ -1377,7 +1382,11 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 			await websocket.close()
 			return
 		
-		await transmitir_admin()
+		if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+			await TAREA_TRANSMITIR
+		
+		TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
 		await transmitir_jugadores(websocket, token)
 		PLAYERS_CONNECTIONS[token] = websocket
 		receive_task = asyncio.create_task(recibir_jugadores(websocket, token))
@@ -1393,4 +1402,8 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 		del TEMP_RESULTS[token]
 		for i in range(0, CURRENT_QUESTION):
 			del SUMMARY[i][token]
-		await transmitir_admin()
+		
+		if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+			await TAREA_TRANSMITIR
+		
+		TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
