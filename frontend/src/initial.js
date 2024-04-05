@@ -33,19 +33,25 @@ function Initial() {
 		}
 	};
 
-	const handgleReturn = () => {
-		navigate(-1);
-	};
+	function handleAdminClick() {
+		navigate("/login");
+	}
 
 	return (
-		<div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+		<div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light position-relative">
+			{/* Botón Admin en la parte superior derecha */}
+			<button
+				type="button"
+				className="btn btn-secondary position-absolute top-0 end-0 m-3"
+				onClick={handleAdminClick}
+			>
+				Admin
+			</button>
+
 			<div className="card p-4 mb-2" style={{ maxWidth: "400px" }}>
-				{" "}
-				{/* Ajusta el margen inferior como sea necesario */}
 				<div className="card-body">
 					<form onSubmit={handleSubmit}>
 						<h3 className="card-title text-center mb-3">Jugar</h3>
-
 						{/* Campo Usuario */}
 						<div className="mb-3">
 							<label htmlFor="Pin" className="form-label">

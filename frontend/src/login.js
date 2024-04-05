@@ -24,9 +24,9 @@ function Login() {
 
 			if (response.ok) {
 				localStorage.setItem("token", data.token);
-				navigate("/menu/test"); // Redirige al usuario a /menu
+				navigate("/menu/test");
 			} else {
-				setError(data.detail || "Error de autenticación"); // Muestra el mensaje de error
+				setError(data.detail || "Error de autenticación");
 			}
 		} catch (error) {
 			setError("Error de Login");
@@ -34,21 +34,19 @@ function Login() {
 	};
 
 	const handgleReturn = () => {
-		navigate(-1);
+		navigate("/");
 	};
 
 	return (
 		<div className="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
 			<div className="card p-4 mb-2" style={{ maxWidth: "400px" }}>
 				{" "}
-				{/* Ajusta el margen inferior como sea necesario */}
 				<div className="card-body">
 					<form onSubmit={handleSubmit}>
 						<h3 className="card-title text-center mb-3">
 							Iniciar Sesión
 						</h3>
 
-						{/* Campo Usuario */}
 						<div className="mb-3">
 							<label htmlFor="username" className="form-label">
 								Usuario
@@ -63,7 +61,6 @@ function Login() {
 							/>
 						</div>
 
-						{/* Campo Contraseña */}
 						<div className="mb-4">
 							<label htmlFor="password" className="form-label">
 								Contraseña

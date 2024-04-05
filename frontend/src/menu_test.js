@@ -19,12 +19,17 @@ function MenuTest() {
 				`http://localhost:8000/test/all/token=${token}`
 			);
 			if (!response.ok) {
-				throw new Error("Error al cargar los tests");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 			const data = await response.json();
 			setTests(data);
 		} catch (error) {
-			console.error(error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 
@@ -39,15 +44,16 @@ function MenuTest() {
 				{ method: "POST" }
 			);
 			if (!response.ok) {
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
 				throw new Error(
-					`Error al ${
-						archivedStatus ? "desarchivar" : "archivar"
-					} el test`
+					`Error ${response.status}: ${response.statusText}`
 				);
 			}
 			fetchTests();
 		} catch (error) {
-			console.error(error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 
@@ -59,11 +65,16 @@ function MenuTest() {
 					{ method: "DELETE" }
 				);
 				if (!response.ok) {
-					throw new Error("Error al eliminar el test");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				fetchTests();
 			} catch (error) {
-				console.error(error.message);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 	};
@@ -253,80 +264,89 @@ function MenuTest() {
 				</aside>
 
 				<section className="col-md-9">
-					<div className="row">
-						{filteredTests.map((test) => (
-							<div
-								key={test.id}
-								className="col-md-4 mb-4 d-flex align-items-stretch"
-							>
-								<div className="card" style={{ width: "100%" }}>
-									<img
-										src={
-											test.image ||
-											`${process.env.PUBLIC_URL}/default-banner.png`
-										}
-										className="card-img-top img-fluid"
-										style={{
-											maxHeight: "200px",
-											objectFit: "cover",
-										}}
-										alt={`Test ${test.title}`}
-										onError={(e) => {
-											e.target.onerror = null;
-											e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
-										}}
-									/>
-									<div className="card-body d-flex flex-column">
-										<h5 className="card-title">
-											{test.title}
-										</h5>
-										<p className="card-text">
-											Jugado: {test.played} veces
-										</p>
-										<p className="card-text">
-											Creado:{" "}
-											{new Date(
-												test.createdAt
-											).toLocaleDateString()}
-										</p>
-										<div className="mt-auto d-flex justify-content-between">
-											<button
-												className="btn btn-info"
-												onClick={() =>
-													handleInfo(test.id)
-												}
-											>
-												Info
-											</button>
-											<div className="d-flex">
+					{filteredTests ? (
+						<div className="row">
+							{filteredTests.map((test) => (
+								<div
+									key={test.id}
+									className="col-md-4 mb-4 d-flex align-items-stretch"
+								>
+									<div
+										className="card"
+										style={{ width: "100%" }}
+									>
+										<img
+											src={
+												test.image ||
+												`${process.env.PUBLIC_URL}/default-banner.png`
+											}
+											className="card-img-top img-fluid"
+											style={{
+												maxHeight: "200px",
+												objectFit: "cover",
+											}}
+											alt={`Test ${test.title}`}
+											onError={(e) => {
+												e.target.onerror = null;
+												e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
+											}}
+										/>
+										<div className="card-body d-flex flex-column">
+											<h5 className="card-title">
+												{test.title}
+											</h5>
+											<p className="card-text">
+												Jugado: {test.played} veces
+											</p>
+											<p className="card-text">
+												Creado:{" "}
+												{new Date(
+													test.createdAt
+												).toLocaleDateString()}
+											</p>
+											<div className="mt-auto d-flex justify-content-between">
 												<button
-													className="btn btn-warning me-2" // Agregado me-2 para dar margen extra
+													className="btn btn-info"
 													onClick={() =>
-														handleArchiveToggle(
-															test.id,
-															!test.archived
-														)
+														handleInfo(test.id)
 													}
 												>
-													{test.archived
-														? "Desarchivar"
-														: "Archivar"}
+													Info
 												</button>
-												<button
-													className="btn btn-danger"
-													onClick={() =>
-														handleDelete(test.id)
-													}
-												>
-													Eliminar
-												</button>
+												<div className="d-flex">
+													<button
+														className="btn btn-warning me-2" // Agregado me-2 para dar margen extra
+														onClick={() =>
+															handleArchiveToggle(
+																test.id,
+																!test.archived
+															)
+														}
+													>
+														{test.archived
+															? "Desarchivar"
+															: "Archivar"}
+													</button>
+													<button
+														className="btn btn-danger"
+														onClick={() =>
+															handleDelete(
+																test.id
+															)
+														}
+													>
+														Eliminar
+													</button>
+												</div>
 											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+					) : (
+						<p>Cargando detalles del juego...</p>
+					)}
 				</section>
 			</div>
 		</div>

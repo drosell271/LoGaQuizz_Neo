@@ -16,7 +16,10 @@ function GameDetail() {
 					`http://localhost:8000/results/test/${testid}/game/${gameid}/token=${token}`
 				);
 				if (!response.ok) {
-					throw new Error("Network response was not ok");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				const data = await response.json();
 				let totalPlayers = data.games[0].results.length;
@@ -30,7 +33,9 @@ function GameDetail() {
 				setTotalPlayers(totalPlayers);
 				setGameData(data);
 			} catch (error) {
-				console.error("Error:", error);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		};
 
@@ -108,7 +113,10 @@ function GameDetail() {
 					`http://localhost:8000/results/test/${testid}/game/${gameid}/token=${token}`
 				);
 				if (!response.ok) {
-					throw new Error("Network response was not ok");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				const data = await response.json();
 				setGameData(data);
@@ -119,7 +127,9 @@ function GameDetail() {
 					})
 				);
 			} catch (error) {
-				console.error("Error:", error);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		};
 
@@ -223,7 +233,7 @@ function GameDetail() {
 								<br />
 								{gameData.questions.map((question) => (
 									<div key={question.id} className="mb-3">
-										<h4>{question.title}</h4>
+										<h5>{question.title}</h5>
 										<div
 											className="d-flex"
 											style={{
@@ -354,7 +364,7 @@ function GameDetail() {
 										</div>
 									</div>
 								))}
-								<h3 className="mt-4">Jugadores:</h3>
+								<h4 className="mt-4">Jugadores:</h4>
 								<div className="card mb-2">
 									<div className="card-header d-flex justify-content-between">
 										<span
@@ -370,7 +380,7 @@ function GameDetail() {
 												: orderDirection.player_name ===
 												  "desc"
 												? "↓"
-												: ""}
+												: " "}
 										</span>
 										<span
 											className="clickable"
@@ -382,7 +392,7 @@ function GameDetail() {
 												: orderDirection.score ===
 												  "desc"
 												? "↓"
-												: ""}
+												: " "}
 											<br />
 											Max: {maxPoints}
 										</span>

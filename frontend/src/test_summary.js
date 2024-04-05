@@ -18,13 +18,18 @@ function TestResults() {
 				`http://localhost:8000/results/test/${id}/all/token=${token}`
 			);
 			if (!response.ok) {
-				throw new Error("Network response was not ok");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 			const data = await response.json();
-			setTestName(data.title || "Test"); // Actualizas el estado del nombre del test
+			setTestName(data.title || "Test");
 			setTestResults(data.games || []);
 		} catch (error) {
-			console.error("Error:", error);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 
@@ -38,13 +43,17 @@ function TestResults() {
 					}
 				);
 				if (!response.ok) {
-					throw new Error("Error al eliminar el juego");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				alert("Juego eliminado con éxito");
-				fetchTestResults(); // Recargar los resultados
+				fetchTestResults();
 			} catch (error) {
-				console.error("Error:", error);
-				alert("Error al eliminar el juego: " + error.message);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 	};

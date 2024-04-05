@@ -216,14 +216,18 @@ function CreateTest() {
 			);
 
 			if (!response.ok) {
-				throw new Error("Error al crear el test");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 
 			alert("Test creado con éxito");
 			navigate("/menu/test");
 		} catch (error) {
-			console.error("Error al crear el test:", error);
-			alert("No se pudo crear el test: " + error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 

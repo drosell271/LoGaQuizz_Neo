@@ -14,7 +14,10 @@ function DetalleTest() {
 				`http://localhost:8000/test/${id}/view/token=${token}`
 			);
 			if (!response.ok) {
-				throw new Error("Error al cargar el test");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 			const data = await response.json();
 			const puntuacionMaxima = data.questions.reduce((acc, current) => {
@@ -23,7 +26,9 @@ function DetalleTest() {
 			setMaxPoints(puntuacionMaxima);
 			setTest(data);
 		} catch (error) {
-			console.error(error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	}, [id, token]);
 
@@ -48,12 +53,16 @@ function DetalleTest() {
 				}
 			);
 			if (!response.ok) {
-				throw new Error("Error al archivar el test");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
-			alert("Test archivado con éxito");
-			navigate("/menu/test");
+			window.location.reload();
 		} catch (error) {
-			console.error(error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 
@@ -67,19 +76,23 @@ function DetalleTest() {
 					}
 				);
 				if (!response.ok) {
-					throw new Error("Error al eliminar el test");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				alert("Test eliminado con éxito");
 				navigate("/menu/test");
 			} catch (error) {
-				console.error(error.message);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 	};
 
 	const handlePlay = async () => {
-		console.log("Jugar ha sido clickeado");
-		console.log("test state", test, test.archiv);
+		navigate(`/play/${id}/admin`);
 	};
 
 	const handgleReturn = () => {
@@ -190,6 +203,9 @@ function DetalleTest() {
 									Jugado: {test.played} veces
 								</p>
 								<p className="card-text">
+									Puntuación máxima: {maxPoints}
+								</p>
+								<p className="card-text">
 									Creado:{" "}
 									{new Date(
 										test.createdAt
@@ -201,14 +217,9 @@ function DetalleTest() {
 										test.updatedAt
 									).toLocaleDateString()}
 								</p>
-								<p className="card-text">
-									Puntuación máxima: {maxPoints}
-								</p>
-								<br />
-								<h5 className="mt-4 mb-4">Preguntas:</h5>
+
 								{test.questions.map((question, index) => (
 									<div key={question.id} className="mb-3">
-										{/* Fondo gris debajo de la imagen y del contenido */}
 										<div
 											className="d-flex"
 											style={{
@@ -216,7 +227,6 @@ function DetalleTest() {
 												borderRadius: "10px",
 											}}
 										>
-											{/* Contenedor de la imagen con bordes redondeados */}
 											<div
 												className="me-3"
 												style={{
@@ -227,42 +237,30 @@ function DetalleTest() {
 													borderTopLeftRadius: "10px",
 													borderBottomLeftRadius:
 														"10px",
-													width: "100px", // Establece el ancho que desees para la imagen
-													minHeight: "150px", // Ajusta esto según el contenido o la altura deseada
+													width: "100px",
+													minHeight: "150px",
 												}}
 												onError={(e) =>
 													(e.currentTarget.style.backgroundImage = `url(${process.env.PUBLIC_URL}/default-banner.png)`)
 												}
-											>
-												{/* Este div permanece vacío; la imagen es un fondo */}
-											</div>
-											{/* Contenido de la pregunta */}
+											></div>
 											<div
 												style={{
 													flex: 1,
 													padding: "10px",
 												}}
 											>
-												<div
-													style={{
-														fontWeight: "bold",
-														marginBottom: "10px",
-													}}
-												>
-													Pregunta {index + 1}{" "}
-													{/* Contador de preguntas */}
-												</div>
 												<p>
 													<strong>
 														{question.title}
 													</strong>
 												</p>
-												{/* Contenedor para Tiempo y Puntos al mismo nivel y alineados a la izquierda */}
 												<div className="d-flex align-items-start">
 													<p className="me-3">
 														{" "}
-														{/* Aumenta el espacio entre "Tiempo" y "Puntos" */}
-														<strong>Tiempo:</strong>{" "}
+														<strong>
+															Tiempo:
+														</strong>{" "}
 														{question.allocatedTime}{" "}
 														segundos
 													</p>

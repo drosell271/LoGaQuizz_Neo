@@ -14,20 +14,25 @@ function PlayerResults() {
 					`http://localhost:8000/results/player/${id}/all/token=${token}`
 				);
 				if (!response.ok) {
-					throw new Error("Network response was not ok");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				const data = await response.json();
 				setTests(data);
 			} catch (error) {
-				console.error("Error:", error);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 
 		fetchResults();
 	}, [id, token]);
 
-	const handleMoreClick = (playerId, gameId) => {
-		navigate(`/menu/player/${playerId}/game/${gameId}`);
+	const handleMoreClick = (gameId) => {
+		navigate(`/menu/player/${id}/game/${gameId}`);
 	};
 
 	const handgleReturn = () => {
@@ -94,73 +99,76 @@ function PlayerResults() {
 
 				<section className="col-md-10">
 					<h2>Resultados de: {playerName}</h2>
-					<div className="row">
-						{tests.map((test) =>
-							test.games.map((game) => (
-								<div
-									key={game.id}
-									className="col-sm-6 col-md-4 col-lg-3 mb-3"
-								>
+					{tests ? (
+						<div className="row">
+							{tests.map((test) =>
+								test.games.map((game) => (
 									<div
-										className="card h-100"
-										style={{ paddingBottom: "0.5rem" }}
+										key={game.id}
+										className="col-sm-6 col-md-4 col-lg-3 mb-3"
 									>
-										<img
-											src={
-												test.image ||
-												`${process.env.PUBLIC_URL}/default-banner.png`
-											}
-											className="card-img-top img-fluid"
-											style={{
-												maxHeight: "150px",
-												objectFit: "cover",
-											}}
-											alt={`Test ${test.title}`}
-											onError={(e) => {
-												e.target.onerror = null;
-												e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
-											}}
-										/>
 										<div
-											className="card-body d-flex flex-column"
-											style={{ padding: "0.5rem" }}
+											className="card h-100"
+											style={{ paddingBottom: "0.5rem" }}
 										>
-											<h5
-												className="card-title"
-												style={{ fontSize: "1rem" }}
-											>
-												{test.title}
-											</h5>
-											<p
-												className="card-text"
+											<img
+												src={
+													test.image ||
+													`${process.env.PUBLIC_URL}/default-banner.png`
+												}
+												className="card-img-top img-fluid"
 												style={{
-													marginBottom: "0.5rem",
+													maxHeight: "150px",
+													objectFit: "cover",
 												}}
+												alt={`Test ${test.title}`}
+												onError={(e) => {
+													e.target.onerror = null;
+													e.target.src = `${process.env.PUBLIC_URL}/default-banner.png`;
+												}}
+											/>
+											<div
+												className="card-body d-flex flex-column"
+												style={{ padding: "0.5rem" }}
 											>
-												Jugado:{" "}
-												{new Date(
-													game.playedAt
-												).toLocaleDateString()}
-											</p>
-											<div className="mt-auto d-flex justify-content-between">
-												<button
-													className="btn btn-primary"
-													onClick={() =>
-														handleMoreClick(
-															test.id,
-															game.id
-														)
-													}
+												<h5
+													className="card-title"
+													style={{ fontSize: "1rem" }}
 												>
-													Más
-												</button>
+													{test.title}
+												</h5>
+												<p
+													className="card-text"
+													style={{
+														marginBottom: "0.5rem",
+													}}
+												>
+													Jugado:{" "}
+													{new Date(
+														game.playedAt
+													).toLocaleDateString()}
+												</p>
+												<div className="mt-auto d-flex justify-content-between">
+													<button
+														className="btn btn-primary"
+														onClick={() =>
+															handleMoreClick(
+																game.id
+															)
+														}
+													>
+														Más
+													</button>
+												</div>
 											</div>
 										</div>
 									</div>
-								</div>
-							))
-						)}
-					</div>
+								))
+							)}
+						</div>
+					) : (
+						<p>Cargando datos del juego...</p>
+					)}
 				</section>
 			</div>
 		</div>

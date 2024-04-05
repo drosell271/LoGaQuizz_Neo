@@ -14,7 +14,10 @@ function PlayerGameDetails() {
 				const response = await fetch(url);
 
 				if (!response.ok) {
-					throw new Error("Error al cargar los detalles del juego");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 
 				const data = await response.json();
@@ -22,6 +25,8 @@ function PlayerGameDetails() {
 				setGameDetails(data);
 			} catch (error) {
 				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		};
 
@@ -83,7 +88,7 @@ function PlayerGameDetails() {
 					{gameDetails ? (
 						<>
 							<div className="mb-4">
-								<h1>{gameDetails.title}</h1>
+								<h2>{gameDetails.title}</h2>
 								<img
 									src={
 										gameDetails.image ||
@@ -103,7 +108,7 @@ function PlayerGameDetails() {
 								/>
 							</div>
 							<div>
-								<h4>
+								<h5>
 									Detalles del Juego del Jugador:{" "}
 									<strong>
 										{
@@ -111,47 +116,43 @@ function PlayerGameDetails() {
 												.player_name
 										}
 									</strong>
-								</h4>
+								</h5>
 								{gameDetails.questions &&
 									gameDetails.questions.map(
 										(question, index) => (
 											<div
 												key={index}
-												className="card mb-3"
-												style={{ maxWidth: "540px" }}
+												className="card mb-3 bg-light" // Tarjeta con fondo gris claro
 											>
 												<div className="row g-0">
 													{question.image && (
-														<div className="col-md-4">
-															<div
+														<div className="col-md-1">
+															<img
+																src={
+																	question.image ||
+																	`${process.env.PUBLIC_URL}/default-question-image.png`
+																}
+																alt="Imagen de la pregunta"
 																className="card-img-top rounded-start h-100"
 																style={{
-																	backgroundImage: `url(${
-																		question.image ||
-																		`${process.env.PUBLIC_URL}/default-question-image.png`
-																	}), url(${
-																		process
-																			.env
-																			.PUBLIC_URL
-																	}/default-banner.png)`,
-																	backgroundSize:
+																	objectFit:
 																		"cover",
-																	backgroundPosition:
-																		"center",
 																	borderTopLeftRadius:
 																		"10px",
 																	borderBottomLeftRadius:
 																		"10px",
 																}}
-															></div>
+															/>
 														</div>
 													)}
-													<div className="col-md-8">
+													<div className="col-md-11">
+														{" "}
 														<div className="card-body">
 															<h5 className="card-title">
 																{question.title}
 															</h5>
-															<ul className="list-group list-group-flush">
+															<ul className="pl-4">
+																{" "}
 																{question.answers.map(
 																	(
 																		answer
@@ -192,17 +193,11 @@ function PlayerGameDetails() {
 																				key={
 																					answer.id
 																				}
-																				className={`list-group-item ${
+																				className={`mb-2 ${
 																					isCorrectAnswer
 																						? "text-success"
 																						: ""
 																				}`}
-																				style={{
-																					textDecoration:
-																						isAnsweredByUser
-																							? "underline"
-																							: "none",
-																				}}
 																			>
 																				{isAnsweredByUser && (
 																					<strong>
@@ -227,16 +222,13 @@ function PlayerGameDetails() {
 										)
 									)}
 								<div className="mt-4">
-									<h4>Resultados:</h4>
+									<h5>Resultados:</h5>
 									{gameDetails.games.map((game) => (
 										<div key={game.id}>
 											{game.results.map((result) => (
 												<div
 													key={result.id}
-													className="card mb-3"
-													style={{
-														maxWidth: "540px",
-													}}
+													className="card mb-3 bg-light"
 												>
 													<div className="card-body">
 														<h5 className="card-title">

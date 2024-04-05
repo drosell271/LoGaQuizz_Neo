@@ -13,12 +13,17 @@ function MenuJugadores() {
 				`http://localhost:8000/player/all/token=${token}`
 			);
 			if (!response.ok) {
-				throw new Error("Error al cargar los jugadores");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 			const data = await response.json();
 			setJugadores(data);
 		} catch (error) {
-			console.error(error.message);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	}, [token]);
 
@@ -40,11 +45,16 @@ function MenuJugadores() {
 					}
 				);
 				if (!response.ok) {
-					throw new Error("Error al eliminar al jugador");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				fetchJugadores();
 			} catch (error) {
-				console.error(error.message);
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 	};
@@ -106,43 +116,47 @@ function MenuJugadores() {
 				</aside>
 
 				<section className="col-md-9">
-					<div className="row">
-						{filteredJugadores.map((jugador) => (
-							<div key={jugador.id} className="col-md-4 mb-4">
-								<div className="card">
-									<div className="card-body">
-										<h5 className="card-title">
-											{jugador.name}
-										</h5>
-										<p className="card-text">
-											Creado:{" "}
-											{new Date(
-												jugador.createdAt
-											).toLocaleDateString()}
-										</p>
-										<div className="d-flex">
-											<button
-												className="btn btn-info"
-												onClick={() =>
-													handleInfo(jugador.id)
-												}
-											>
-												Info
-											</button>
-											<button
-												className="btn btn-danger ms-auto"
-												onClick={() =>
-													handleDelete(jugador.id)
-												}
-											>
-												Eliminar
-											</button>
+					{filteredJugadores ? (
+						<div className="row">
+							{filteredJugadores.map((jugador) => (
+								<div key={jugador.id} className="col-md-4 mb-4">
+									<div className="card">
+										<div className="card-body">
+											<h5 className="card-title">
+												{jugador.name}
+											</h5>
+											<p className="card-text">
+												Creado:{" "}
+												{new Date(
+													jugador.createdAt
+												).toLocaleDateString()}
+											</p>
+											<div className="d-flex">
+												<button
+													className="btn btn-info"
+													onClick={() =>
+														handleInfo(jugador.id)
+													}
+												>
+													Info
+												</button>
+												<button
+													className="btn btn-danger ms-auto"
+													onClick={() =>
+														handleDelete(jugador.id)
+													}
+												>
+													Eliminar
+												</button>
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+					) : (
+						<p>Cargando detalles del juego...</p>
+					)}
 				</section>
 			</div>
 		</div>

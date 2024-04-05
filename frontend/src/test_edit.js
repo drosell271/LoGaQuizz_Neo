@@ -33,13 +33,17 @@ function EditTest() {
 					`http://localhost:8000/test/${id}/view/token=${token}`
 				);
 				if (!response.ok) {
-					throw new Error("Network response was not ok.");
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
 				}
 				const data = await response.json();
 				setFormData(data);
 			} catch (error) {
-				console.error("Error:", error);
-				navigate("/error"); // Asumiendo que tienes una ruta de error configurada
+				console.error("Fetch error:", error);
+				// Redireccionar a la página de error sin pasar el código de estado como parámetro
+				navigate("/error");
 			}
 		}
 
@@ -211,13 +215,18 @@ function EditTest() {
 			);
 
 			if (!response.ok) {
-				throw new Error("Error al guardar el test");
+				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+				throw new Error(
+					`Error ${response.status}: ${response.statusText}`
+				);
 			}
 
 			alert("Test guardado con éxito");
 			navigate(`/menu/test/${id}`);
 		} catch (error) {
-			console.error("Error al guardar el test:", error);
+			console.error("Fetch error:", error);
+			// Redireccionar a la página de error sin pasar el código de estado como parámetro
+			navigate("/error");
 		}
 	};
 

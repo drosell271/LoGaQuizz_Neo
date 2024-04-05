@@ -14,6 +14,8 @@ import TestSummary from "./test_summary";
 import TestGameDetails from "./game_by_test";
 import PlayerGameDetails from "./game_by_player";
 import Initial from "./initial";
+import ErrorPage from "./error";
+import PlayAdmin from "./play_admin";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -38,6 +40,8 @@ root.render(
 					path="/menu/player/:id_player/game/:id_game"
 					element={<PlayerGameDetails />}
 				/>
+				<Route path="/error" element={<ErrorPage />} />
+				<Route path="/play/:testId/admin" element={<PlayAdmin />} />
 				{/* Puedes agregar más rutas según sea necesario */}
 			</Routes>
 		</BrowserRouter>
