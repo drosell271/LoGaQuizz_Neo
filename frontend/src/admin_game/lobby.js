@@ -1,10 +1,17 @@
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
-function LobbyScreen({ data, ws }) {
+function LobbyScreen({ data, ws, testid }) {
+	const navigate = useNavigate();
+
 	const handleStart = () => {
 		ws.send("START");
 	};
 
+	const handleBack = () => {
+		ws.send("CLOSE");
+		navigate(`/menu/test/${testid}`);
+	};
 	const testImageUrl = data.image;
 
 	return (
@@ -16,14 +23,13 @@ function LobbyScreen({ data, ws }) {
 					backgroundImage: `url(${testImageUrl})`,
 					backgroundSize: "cover",
 					backgroundPosition: "center",
-					filter: "brightness(75%)", // Oscurece la imagen de fondo
 				}}
 			>
 				<div
 					className="card my-4 mx-auto"
 					style={{
 						maxWidth: "30rem",
-						backgroundColor: "rgba(255, 255, 255, 0.7)", // Fondo semitransparente
+						backgroundColor: "rgba(255, 255, 255, 1)", // Fondo semitransparente
 					}}
 				>
 					<div className="card-body text-start">
@@ -37,6 +43,12 @@ function LobbyScreen({ data, ws }) {
 								className="btn btn-primary"
 							>
 								Comenzar Juego
+							</button>
+							<button
+								onClick={handleBack}
+								className="btn btn-secondary"
+							>
+								Volver
 							</button>
 						</div>
 						{/* Contador de jugadores conectados alineado a la izquierda */}

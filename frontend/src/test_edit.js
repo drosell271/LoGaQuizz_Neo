@@ -159,7 +159,7 @@ function EditTest() {
 				return false;
 			}
 
-			if (question.allocatedTime <= 10 || question.weight <= 0) {
+			if (question.allocatedTime < 10 || question.weight <= 0) {
 				/*console.log(
 					"El tiempo asignado o el peso de la pregunta no es válido."
 				);*/
@@ -222,7 +222,7 @@ function EditTest() {
 			}
 
 			alert("Test guardado con éxito");
-			navigate(`/menu/test/${id}`);
+			navigate(`/menu/test`);
 		} catch (error) {
 			console.error("Fetch error:", error);
 			// Redireccionar a la página de error sin pasar el código de estado como parámetro
@@ -454,6 +454,48 @@ function EditTest() {
 										>
 											Borrar Imagen
 										</button>
+									</div>
+								</div>
+								{/* Div contenedor para Tiempo Asignado y Puntos */}
+								<div className="row mb-3">
+									{/* Columna para Tiempo Asignado */}
+									<div className="col">
+										<label className="form-label">
+											Tiempo Asignado (segundos)
+										</label>
+										<input
+											type="number"
+											className="form-control"
+											value={question.allocatedTime}
+											onChange={(e) =>
+												updateQuestion(
+													qIndex,
+													"allocatedTime",
+													parseInt(e.target.value, 10)
+												)
+											}
+											min="10" // Puedes definir un mínimo
+										/>
+									</div>
+
+									{/* Columna para Puntos */}
+									<div className="col">
+										<label className="form-label">
+											Puntos
+										</label>
+										<input
+											type="number"
+											className="form-control"
+											value={question.weight}
+											onChange={(e) =>
+												updateQuestion(
+													qIndex,
+													"weight",
+													parseInt(e.target.value, 10)
+												)
+											}
+											min="1" // Puedes definir un mínimo
+										/>
 									</div>
 								</div>
 								<br />

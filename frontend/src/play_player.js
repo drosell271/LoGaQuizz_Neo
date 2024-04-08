@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import LobbyScreen from "./admin_game/lobby";
-import LoadingScreen from "./admin_game/loading";
-import PlayingScreen from "./admin_game/playing";
-import ResultsScreen from "./admin_game/results";
-import EndScreen from "./admin_game/end";
+import LobbyScreen from "./player_game/lobby";
+import LoadingScreen from "./player_game/loading";
+import PlayingScreen from "./player_game/playing";
+import ResultsScreen from "./player_game/results";
+import EndScreen from "./player_game/end";
 
 function GameScreen() {
-	const { testId } = useParams();
+	const { pin } = useParams();
+	const { name } = useParams();
 	const navigate = useNavigate();
 	const [gameState, setGameState] = useState(null);
 	const [ws, setWs] = useState(null);
 
 	useEffect(() => {
-		const token = localStorage.getItem("token");
-		const newWs = new WebSocket(
-			`ws://localhost:8000/play/test=${testId}/token=${token}`
-		);
+		const wsUrl = `ws://${process.env.REACT_APP_IP}:8000/play/pin=${pin}/player=${name}`;
+		console.log(wsUrl);
+
+		const newWs = new WebSocket(wsUrl);
 
 		newWs.onmessage = (event) => {
 			const data = JSON.parse(event.data);
@@ -28,13 +29,13 @@ function GameScreen() {
 		return () => {
 			if (newWs) newWs.close();
 		};
-	}, [testId]);
+	}, [pin, name]);
 
 	if (!gameState) return <div>Cargando...</div>;
 
 	switch (gameState.mode) {
 		case "LOBBY":
-			return <LobbyScreen data={gameState} />;
+			return <LobbyScreen data={gameState} ws={ws} />;
 		case "LOADING":
 			return <LoadingScreen data={gameState} />;
 		case "PLAYING":
@@ -42,7 +43,7 @@ function GameScreen() {
 		case "RESULTS":
 			return <ResultsScreen data={gameState} />;
 		case "END":
-			return <EndScreen data={gameState} ws={ws} testid={testId} />;
+			return <EndScreen data={gameState} />;
 		default:
 			console.log("Invalid game mode");
 			navigate("/error");

@@ -2,36 +2,20 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Initial() {
-	const [pin, setUsername] = useState("");
-	const [name, setPassword] = useState("");
+	const [pin, setPin] = useState(0);
+	const [name, setName] = useState("");
 	const [error, setError] = useState("");
 	const navigate = useNavigate();
 
-	const handleSubmit = async (e) => {
+	function handleSubmit(e) {
 		e.preventDefault();
-		setError("");
-
-		try {
-			const response = await fetch("http://localhost:8000/login", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ pin, name }),
-			});
-
-			const data = await response.json();
-
-			if (response.ok) {
-				localStorage.setItem("token", data.token);
-				navigate("/menu/test"); // Redirige al usuario a /menu
-			} else {
-				setError(data.detail || "Error de autenticación"); // Muestra el mensaje de error
-			}
-		} catch (error) {
-			setError("Error de Login");
+		if (!pin || !name) {
+			setError("Debes ingresar un PIN y un nombre");
+			return;
 		}
-	};
+		setError("");
+		navigate(`/game/${pin}/${name}`);
+	}
 
 	function handleAdminClick() {
 		navigate("/login");
@@ -61,8 +45,8 @@ function Initial() {
 								type="text"
 								className="form-control"
 								id="pin"
-								value={pin}
-								onChange={(e) => setUsername(e.target.value)}
+								value={pin != 0 ? pin : ""}
+								onChange={(e) => setPin(e.target.value)}
 								placeholder="PIN"
 							/>
 						</div>
@@ -77,7 +61,7 @@ function Initial() {
 								className="form-control"
 								id="name"
 								value={name}
-								onChange={(e) => setPassword(e.target.value)}
+								onChange={(e) => setName(e.target.value)}
 								placeholder="Nombre"
 							/>
 						</div>

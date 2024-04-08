@@ -908,7 +908,6 @@ async def admin_websocket(websocket: WebSocket, testID: int, token: str):
 
 	finally:
 		await close_all_connections()
-		await websocket.close()
 
 async def initial_setup(testID: int):
 	global MODE, PIN, TEST, TOTAL_QUESTIONS, CURRENT_QUESTION, TOTAL_RESPONSES, TIME, RESULTS_CALCULATED, PLAYERS_TOKEN, ADMIN_CONNECTION, PLAYERS_CONNECTIONS, TEMP_RESULTS, SUMMARY
@@ -1119,6 +1118,7 @@ async def transmitir_admin():
 			"instructions": "Enviar 'SAVE' para guardar los resultados, para no guardar mande 'CLOSE'"
 		}
 		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+		await broadcast()
 		return
 	
 	else:
@@ -1136,6 +1136,11 @@ async def recibir_admin():
 		
 		if data != None:
 			if MODE == "LOBBY":
+				if data == "CLOSE":
+					await close_all_connections()
+					await ADMIN_CONNECTION.close()
+					return
+				
 				if data == "START" and len(PLAYERS_TOKEN) > 0:
 					CURRENT_QUESTION = 0
 					TOTAL_RESPONSES = 0
@@ -1341,8 +1346,6 @@ async def recibir_jugadores(websocket: WebSocket, token: str):
 						
 						if TOTAL_RESPONSES >= len(PLAYERS_TOKEN):
 							TIME = 0
-
-						await websocket.send_text(json.dumps({"status": "Recibido"}))
 					else:
 						print(f"Token {token} no encontrado en TEMP_RESULTS.")
 						await websocket.send_text(json.dumps({"error": "Token no encontrado"}))

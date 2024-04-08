@@ -16,6 +16,7 @@ import PlayerGameDetails from "./game_by_player";
 import Initial from "./initial";
 import ErrorPage from "./error";
 import PlayAdmin from "./play_admin";
+import PlayPlayer from "./play_player";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -42,6 +43,7 @@ root.render(
 				/>
 				<Route path="/error" element={<ErrorPage />} />
 				<Route path="/play/:testId/admin" element={<PlayAdmin />} />
+				<Route path="/game/:pin/:name" element={<PlayPlayer />} />
 				{/* Puedes agregar más rutas según sea necesario */}
 			</Routes>
 		</BrowserRouter>

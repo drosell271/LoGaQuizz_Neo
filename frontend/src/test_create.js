@@ -457,6 +457,48 @@ function CreateTest() {
 										</button>
 									</div>
 								</div>
+								{/* Div contenedor para Tiempo Asignado y Puntos */}
+								<div className="row mb-3">
+									{/* Columna para Tiempo Asignado */}
+									<div className="col">
+										<label className="form-label">
+											Tiempo Asignado (segundos)
+										</label>
+										<input
+											type="number"
+											className="form-control"
+											value={question.allocatedTime}
+											onChange={(e) =>
+												updateQuestion(
+													qIndex,
+													"allocatedTime",
+													parseInt(e.target.value, 10)
+												)
+											}
+											min="10" // Puedes definir un mínimo
+										/>
+									</div>
+
+									{/* Columna para Puntos */}
+									<div className="col">
+										<label className="form-label">
+											Puntos
+										</label>
+										<input
+											type="number"
+											className="form-control"
+											value={question.weight}
+											onChange={(e) =>
+												updateQuestion(
+													qIndex,
+													"weight",
+													parseInt(e.target.value, 10)
+												)
+											}
+											min="1" // Puedes definir un mínimo
+										/>
+									</div>
+								</div>
 								<br />
 								<div className="mb-3">
 									<h6>Respuestas</h6>
