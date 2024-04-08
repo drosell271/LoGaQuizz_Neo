@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function LobbyScreen({ data, ws, testid }) {
 	const navigate = useNavigate();
@@ -10,7 +10,7 @@ function LobbyScreen({ data, ws, testid }) {
 
 	const handleBack = () => {
 		ws.send("CLOSE");
-		navigate(`/menu/test/${testid}`);
+		navigate(`/menu/test`);
 	};
 	const testImageUrl = data.image;
 	const playerUrl = `http://${process.env.REACT_APP_IP}:3000/`;
@@ -53,11 +53,9 @@ function LobbyScreen({ data, ws, testid }) {
 							</button>
 						</div>
 						{/* Contador de jugadores conectados alineado a la izquierda */}
+						<p className="card-text">Direccion: {playerUrl}</p>
 						<p className="card-text">
-							Direccion: {data.players.length}
-						</p>
-						<p className="card-text">
-							Jugadores Conectados: {playerUrl}
+							Jugadores Conectados: {data.players.length}
 						</p>
 					</div>
 				</div>

@@ -7,9 +7,10 @@ function Results({ data }) {
 	const noAnswerText = "No se ha proporcionado respuesta";
 
 	return (
-		<div className="container mt-3">
-			<h2 className="text-center">Resultados</h2>
+		<div className="vh-100 d-flex justify-content-center align-items-center flex-column">
 			<div className="card text-center">
+				<br />
+				<h2 className="text-center">Resultados</h2>
 				<div className="card-body">
 					<h5 className="card-title">{data.question}</h5>
 					<p className="card-text">

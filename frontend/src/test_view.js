@@ -96,7 +96,7 @@ function DetalleTest() {
 	};
 
 	const handgleReturn = () => {
-		navigate(-1);
+		navigate("/menu/test");
 	};
 
 	return (
