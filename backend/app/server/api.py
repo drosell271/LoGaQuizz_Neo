@@ -206,7 +206,7 @@ async def get_all_test(token: str):
 		all_test = session.query(Test).all()
 
 		if not all_test:
-			raise HTTPException(status_code=404, detail="No hay tests disponibles")
+			return []
 
 		response = []
 
@@ -816,7 +816,7 @@ async def get_all_players(token: str):
 		all_players = session.query(Player).all()
 
 		if not all_players:
-			raise HTTPException(status_code=404, detail="No hay jugadores disponibles")
+			return []
 
 
 		response_data = []
