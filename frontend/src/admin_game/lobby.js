@@ -13,6 +13,7 @@ function LobbyScreen({ data, ws, testid }) {
 		navigate(`/menu/test/${testid}`);
 	};
 	const testImageUrl = data.image;
+	const playerUrl = `http://${process.env.REACT_APP_IP}:3000/`;
 
 	return (
 		<div className="lobby-screen">
@@ -53,7 +54,10 @@ function LobbyScreen({ data, ws, testid }) {
 						</div>
 						{/* Contador de jugadores conectados alineado a la izquierda */}
 						<p className="card-text">
-							Jugadores Conectados: {data.players.length}
+							Direccion: {data.players.length}
+						</p>
+						<p className="card-text">
+							Jugadores Conectados: {playerUrl}
 						</p>
 					</div>
 				</div>

@@ -35,7 +35,7 @@ function GameScreen() {
 
 	switch (gameState.mode) {
 		case "LOBBY":
-			return <LobbyScreen data={gameState} ws={ws} />;
+			return <LobbyScreen data={gameState} />;
 		case "LOADING":
 			return <LoadingScreen data={gameState} />;
 		case "PLAYING":

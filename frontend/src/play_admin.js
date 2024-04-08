@@ -34,13 +34,13 @@ function GameScreen() {
 
 	switch (gameState.mode) {
 		case "LOBBY":
-			return <LobbyScreen data={gameState} />;
+			return <LobbyScreen data={gameState} ws={ws} />;
 		case "LOADING":
 			return <LoadingScreen data={gameState} />;
 		case "PLAYING":
 			return <PlayingScreen data={gameState} ws={ws} />;
 		case "RESULTS":
-			return <ResultsScreen data={gameState} />;
+			return <ResultsScreen data={gameState} ws={ws} />;
 		case "END":
 			return <EndScreen data={gameState} ws={ws} testid={testId} />;
 		default:
