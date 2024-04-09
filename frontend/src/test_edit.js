@@ -10,7 +10,7 @@ function EditTest() {
 				title: "",
 				image: "",
 				allocatedTime: 30,
-				weight: 1,
+				weight: 10,
 				answers: [
 					{ title: "", isCorrect: false },
 					{ title: "", isCorrect: false },
@@ -86,7 +86,7 @@ function EditTest() {
 					title: "",
 					image: "",
 					allocatedTime: 30,
-					weight: 1,
+					weight: 10,
 					answers: [
 						{ title: "", isCorrect: true },
 						{ title: "", isCorrect: false },

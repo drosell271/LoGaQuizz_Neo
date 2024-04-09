@@ -2,6 +2,8 @@
 
 Aplicación educativa interactiva y versátil que mejora la experiencia de aprendizaje de los estudiantes y facilita las tareas de enseñanza para los profesores en un entorno digital
 
+![Imagen de menu](imagenes/Menu.png)
+
 ## ✅ Requisitos Previos
 
 Antes de comenzar, asegúrate de tener instalado lo siguiente:

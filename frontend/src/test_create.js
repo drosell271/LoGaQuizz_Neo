@@ -10,7 +10,7 @@ function CreateTest() {
 				title: "",
 				image: "",
 				allocatedTime: 30,
-				weight: 1,
+				weight: 10,
 				answers: [
 					{ title: "", isCorrect: true },
 					{ title: "", isCorrect: false },
@@ -63,7 +63,7 @@ function CreateTest() {
 					title: "",
 					image: "",
 					allocatedTime: 30,
-					weight: 1,
+					weight: 10,
 					answers: [
 						{ title: "", isCorrect: true },
 						{ title: "", isCorrect: false },
