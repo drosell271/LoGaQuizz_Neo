@@ -1,77 +1,185 @@
 import subprocess
 import os
-import psutil
-from tqdm import tqdm
-import sys
+import shutil
+import socket
 
-def obtener_color_porcentaje(porcentaje):
-    if porcentaje < 85:
-        return '\033[92m'  # Verde
-    else:
-        return '\033[91m'  # Rojo
+def obtener_direccion_ip():
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	try:
+		# no necesitamos hacer una llamada real
+		s.connect(('10.255.255.255', 1))
+		IP = s.getsockname()[0]
+	except Exception:
+		IP = '127.0.0.1'
+	finally:
+		s.close()
+	return IP
 
-def limpiar_pantalla():
-    # Verificar el sistema operativo y ejecutar el comando correspondiente para limpiar la pantalla
-    if os.name == 'nt':  # Windows
-        subprocess.call('cls', shell=True)
-    else:  # Unix (Linux, macOS)
-        subprocess.call('clear', shell=True)
+def escribir_ip_en_frontend(ip):
+	ruta_env_frontend = "./LoGaQuizz_Neo/frontend/.env"
+	try:
+		with open(ruta_env_frontend, "w") as file:
+			file.write(f"REACT_APP_IP={ip}\n")
+		print(f"Dirección IP {ip} escrita en el archivo .env del frontend.")
+	except IOError:
+		print("Hubo un error al escribir en el archivo .env del frontend.")
 
-def lanzar_comandos_en_paralelo(comando1=None, comando2=None):
-    if comando1 is None:
-        comando1 = "npm start"
-    if comando2 is None:
-        comando2 = ".\\venv\\Scripts\\activate && python ./app/main.py"
+def modificar_credenciales_admin(nuevo_usuario, nueva_contrasena):
+	ruta_api = "./LoGaQuizz_Neo/backend/app/api.py"
+	try:
+		with open(ruta_api, "r") as file:
+			contenido = file.readlines()
+		
+		with open(ruta_api, "w") as file:
+			for linea in contenido:
+				if "ADMIN_USER" in linea:
+					file.write(f'ADMIN_USER = "{nuevo_usuario}"\n')
+				elif "ADMIN_PASSWORD" in linea:
+					file.write(f'ADMIN_PASSWORD = "{nueva_contrasena}"\n')
+				else:
+					file.write(linea)
+	except IOError:
+		print("Hubo un error al actualizar las credenciales del administrador.")
 
-    proceso1 = None
-    proceso2 = None
-    
-    try:
-        # Iniciar proceso para el primer comando
-        proceso1 = subprocess.Popen(comando1, shell=True, cwd="./frontend", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        # Iniciar proceso para el segundo comando
-        proceso2 = subprocess.Popen(comando2, shell=True, cwd="./backend", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def mostrar_info_admin():
+	user, password = "No encontrado", "No encontrado"
+	try:
+		with open("./LoGaQuizz_Neo/backend/app/api.py", "r") as file:
+			for line in file:
+				if "ADMIN_USER" in line:
+					user = line.split('=')[1].strip().strip('"').strip("'")
+				elif "ADMIN_PASSWORD" in line:
+					password = line.split('=')[1].strip().strip('"').strip("'")
+	except IOError:
+		print("No se pudo leer la configuración del administrador.")
 
-        # Esperar a que ambos procesos terminen
-        while proceso1.poll() is None or proceso2.poll() is None:
-            # Limpiar la pantalla antes de imprimir las nuevas medidas
-            limpiar_pantalla()
+	ip = obtener_direccion_ip()
+	escribir_ip_en_frontend(ip)
+	print("\nInformación del administrador:")
+	print(f"Usuario: {user}")
+	print(f"Contraseña: {password}")
+	print(f"Dirección IP del ordenador: {ip}")
 
-            # Obtener estadísticas de uso de CPU y memoria
-            cpu_percent = psutil.cpu_percent()
-            memory_percent = psutil.virtual_memory().percent
+def cambiar_credenciales():
+	nuevo_usuario = input("Ingrese el nuevo usuario: ")
+	nueva_contrasena = input("Ingrese la nueva contraseña: ")
+	modificar_credenciales_admin(nuevo_usuario, nueva_contrasena)
 
-            # Obtener el color correspondiente para la barra de progreso de CPU
-            color_cpu = obtener_color_porcentaje(cpu_percent)
-            # Imprimir la barra de progreso con el uso de CPU
-            barra_cpu = '#' * int(cpu_percent / 2)
-            print(f"CPU:     [{color_cpu}{barra_cpu:<50}\033[0m] {cpu_percent:5.1f}%")
+def lanzar_comandos_en_paralelo():
+	# Define los comandos para frontend y backend
+	comando_frontend = "npm start"
+	comando_backend = "python ./app/main.py"  # Asegúrate de ajustar este comando según tu archivo principal del backend
 
-            # Obtener el color correspondiente para la barra de progreso de memoria
-            color_memoria = obtener_color_porcentaje(memory_percent)
-            # Imprimir la barra de progreso con el uso de memoria
-            barra_memoria = '#' * int(memory_percent / 2)
-            print(f"Memoria: [{color_memoria}{barra_memoria:<50}\033[0m] {memory_percent:5.1f}%")
+	# Directorios de trabajo para cada comando
+	dir_frontend = "./LoGaQuizz_Neo/frontend"
+	dir_backend = "./LoGaQuizz_Neo/backend"
 
-            # Esperar un segundo antes de volver a verificar las estadísticas
-            psutil.cpu_percent(interval=1)
-        
-        # Mostrar mensaje indicando que los procesos han finalizado
-        print("\nProcesos finalizados.")
+	# Iniciar los procesos en paralelo
+	proceso_frontend = subprocess.Popen(comando_frontend, shell=True, cwd=dir_frontend)
+	proceso_backend = subprocess.Popen(comando_backend, shell=True, cwd=dir_backend)
 
-    except KeyboardInterrupt:
-        confirmar_salida = input("\n¿Estás seguro de que deseas salir? (y/n): ")
-        if confirmar_salida.lower() == 'y':
-            # Cerrar los procesos si el usuario confirma la salida
-            if proceso1:
-                proceso1.terminate()
-            if proceso2:
-                proceso2.terminate()
-            print("Procesos interrumpidos. Saliendo...")
-        else:
-            # Continuar esperando si el usuario decide no salir
-            lanzar_comandos_en_paralelo(comando1, comando2)
+	# Esperar a que ambos procesos terminen
+	proceso_frontend.wait()
+	proceso_backend.wait()
 
-# Llamar a la función sin especificar comandos
-lanzar_comandos_en_paralelo()
+def opcion_iniciar():
+	mostrar_info_admin()
+	cambiar = input("\n¿Desea cambiar estas credenciales? (y/n): ")
+	if cambiar.lower() == 'y':
+		cambiar_credenciales()
+	lanzar_comandos_en_paralelo()
+
+def menu_existente():
+	while True:
+		print("\nLa carpeta LoGaQuizz_Neo ya existe. Elige una opción:")
+		print("1. Iniciar programa")
+		print("2. Reinstalar/Reparar")
+		print("3. Eliminar programa")
+		opcion = input("Ingresa tu opción (1, 2, 3): ")
+
+		if opcion == '1':
+			lanzar_comandos_en_paralelo()
+			break
+		elif opcion == '2':
+			reinstalar_programa()
+			break
+		elif opcion == '3':
+			eliminar_programa()
+			break
+		else:
+			print("Opción no válida, intenta de nuevo.")
+
+def reinstalar_programa():
+	eliminar_programa()
+	instalar_backend()
+	instalar_frontend()
+
+def eliminar_programa():
+	confirmacion = input("¿Estás seguro de que quieres eliminar LoGaQuizz_Neo? (y/n): ")
+	if confirmacion.lower() == 'y':
+		if os.path.isdir("./LoGaQuizz_Neo"):
+			shutil.rmtree("./LoGaQuizz_Neo")
+			print("Programa eliminado correctamente.")
+		else:
+			print("No se encontró la carpeta LoGaQuizz_Neo.")
+	else:
+		print("Eliminación cancelada.")
+
+def preguntar_instalar():
+	if not existe_carpeta_logaquizz():
+		respuesta = input("La carpeta LoGaQuizz_Neo no existe. ¿Desea instalar el programa? (y/n): ")
+		if respuesta.lower() == 'y':
+			instalar_backend()
+			instalar_frontend()
+	else:
+		menu_existente()
+
+def existe_carpeta_logaquizz():
+	return os.path.isdir("./LoGaQuizz_Neo")
+
+def generar_base_de_datos():
+	comando_db = "python app/server/db_config.py"
+	subprocess.call(comando_db, shell=True, cwd="./LoGaQuizz_Neo/backend")
+	print("Base de datos local.db creada.")
+
+def instalar_backend():
+	if not os.path.isdir("./LoGaQuizz_Neo/backend"):
+		print("Creando y configurando el entorno virtual para el backend...")
+
+		subprocess.call(["git", "clone", "https://github.com/drosell271/LoGaQuizz_Neo"], shell=True)
+		subprocess.call(["python", "-m", "venv", "venv"], shell=True, cwd="./LoGaQuizz_Neo/backend")
+
+		# Verificar si existe local.db y generarla si no existe
+		if not os.path.isfile("./LoGaQuizz_Neo/backend/app/db/local.db"):
+			generar_base_de_datos()
+		
+		if os.name == 'nt':  # Windows
+			subprocess.call(".\\venv\\Scripts\\activate && pip install -r requirements.txt", shell=True, cwd="./LoGaQuizz_Neo/backend")
+		else:  # Unix (Linux, macOS)
+			subprocess.call("source ./venv/bin/activate && pip install -r requirements.txt", shell=True, cwd="./LoGaQuizz_Neo/backend")
+	else:
+		print("El backend ya está configurado.")
+
+def instalar_frontend():
+	if not os.path.isdir("./LoGaQuizz_Neo/frontend"):
+		print("Instalando dependencias del frontend...")
+		subprocess.call("npm install", shell=True, cwd="./LoGaQuizz_Neo/frontend")
+	else:
+		print("El frontend ya está configurado.")
+
+def preguntar_instalar():
+	if not existe_carpeta_logaquizz():
+		respuesta = input("La carpeta LoGaQuizz_Neo no existe. ¿Desea instalar el programa? (y/n): ")
+		if respuesta.lower() == 'y':
+			instalar_backend()
+			instalar_frontend()
+			print("Programa instalado correctamente.")
+			menu_existente()
+	else:
+		menu_existente()
+
+def main():
+	preguntar_instalar()
+
+if __name__ == "__main__":
+	main()
