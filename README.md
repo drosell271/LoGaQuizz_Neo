@@ -85,7 +85,7 @@ Para usar "LoGaQuizz_Neo", debes tener ambos servidores, el del frontend y el de
 ### 🌐 Conexión de los Jugadores
 
 - Los jugadores deben estar conectados a la misma red que el ordenador que ejecuta los servidores.
-- Para acceder a la aplicación, los jugadores deben navegar a `http://{local_ip}:3000/` en su navegador web, donde `{local_ip}` es la dirección IP local del servidor.
+- Para acceder a la aplicación, el administrador debe revisar y cambiar el valor de la IP local (`{local_ip}`) que está en el archivo `frontend/.env`. Los jugadores deben navegar a `http://{local_ip}:3000/` en su navegador web.
 
 ### 📊 Funcionalidades
 
@@ -98,6 +98,18 @@ La aplicación "LoGaQuizz_Neo" permite:
 
 Asegúrate de que todos los usuarios tengan acceso a la red adecuada y comprendan cómo conectar sus dispositivos para participar.
 
+## 🌟 Launcher
+
+![Imagen de launcher](images/Launcher.png)
+
+Se ha simplificado el proceso de instalación y ejecución con un launcher que puedes descargar desde la sección de `Releases`.  
+Para utilizarlo, siga las siguientes instrucciones:
+
+1. **Descargar el Launcher**
+Ve a la sección de `Releases` de nuestro repositorio y descarga el archivo `.exe` del launcher.
+
+2. **Ejecutar el Launcher**
+Una vez descargado, ejecuta el archivo `.exe`. El launcher automáticamente configurará el entorno, instalará las dependencias necesarias y pondrá en marcha los servidores de frontend y backend.
 
 ## 📜 Licencia
 Este proyecto está licenciado bajo la Licencia MIT.
