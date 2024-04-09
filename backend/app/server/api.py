@@ -175,6 +175,7 @@ async def login(input_data: JSON_Login):
 
 @app.post("/logout/token={token}")
 async def logout(token: str, response: Response):
+	global ADMIN_TOKEN, PLAYERS_TOKEN
 	if not token:
 		raise HTTPException(status_code=401, detail="No se encontró token de sesión")
 
