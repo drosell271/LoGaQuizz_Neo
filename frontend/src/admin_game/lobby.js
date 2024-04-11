@@ -1,8 +1,18 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function LobbyScreen({ data, ws, testid }) {
 	const navigate = useNavigate();
+	const [qrImageUrl, setQrImageUrl] = useState("");
+
+	const playerUrl = `http://${process.env.REACT_APP_IP}:3000/`;
+	const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+		playerUrl
+	)}`;
+
+	useEffect(() => {
+		setQrImageUrl(qrApiUrl);
+	}, [playerUrl]);
 
 	const handleStart = () => {
 		ws.send("START");
@@ -13,7 +23,6 @@ function LobbyScreen({ data, ws, testid }) {
 		navigate(`/menu/test`);
 	};
 	const testImageUrl = data.image;
-	const playerUrl = `http://${process.env.REACT_APP_IP}:3000/`;
 
 	return (
 		<div className="lobby-screen">
@@ -53,7 +62,9 @@ function LobbyScreen({ data, ws, testid }) {
 							</button>
 						</div>
 						{/* Contador de jugadores conectados alineado a la izquierda */}
-						<p className="card-text">Direccion: {playerUrl}</p>
+						<p className="card-text">
+							<img src={qrImageUrl} alt="QR Code" />
+						</p>
 						<p className="card-text">
 							Jugadores Conectados: {data.players.length}
 						</p>

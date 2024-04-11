@@ -14,7 +14,6 @@ function PlayerGameDetails() {
 				const response = await fetch(url);
 
 				if (!response.ok) {
-					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
 					throw new Error(
 						`Error ${response.status}: ${response.statusText}`
 					);
@@ -25,7 +24,6 @@ function PlayerGameDetails() {
 				setGameDetails(data);
 			} catch (error) {
 				console.error("Fetch error:", error);
-				// Redireccionar a la página de error sin pasar el código de estado como parámetro
 				navigate("/error");
 			}
 		};
