@@ -30,26 +30,24 @@ function PlayingScreen({ data, ws }) {
 				</div>
 			) : (
 				<div className="container-fluid h-100 d-flex flex-wrap align-items-stretch justify-content-center">
+					<div className="col-12">
+						<h1 className="text-center">
+							{questionInfo.question_title}
+						</h1>
+					</div>
 					{questionInfo.question_answers.map((answer, index) => (
-						<div
-							className="col-6 px-2 py-2"
-							key={answer.answers_id}
+						<button
+							className="btn w-100"
+							style={{
+								backgroundColor: colors[index % colors.length],
+								fontSize: "1.2em", // Tamaño de fuente grande para facilidad de lectura
+								minHeight: "15vh", // Ajuste la altura mínima para cada botón
+								margin: "0.5em", // Añadir margen entre los botones
+							}}
+							onClick={() => handleSubmit(answer.answers_id)}
 						>
-							{" "}
-							{/* Añade padding en lugar de margen a las columnas */}
-							<button
-								className="btn w-100 h-100"
-								style={{
-									backgroundColor:
-										colors[index % colors.length],
-									fontSize: "1.5em", // Tamaño de fuente grande para facilidad de lectura
-									minHeight: "40vh", // Ajuste la altura mínima para cada botón
-								}}
-								onClick={() => handleSubmit(answer.answers_id)}
-							>
-								{answer.answers_title}
-							</button>
-						</div>
+							{answer.answers_title}
+						</button>
 					))}
 				</div>
 			)}

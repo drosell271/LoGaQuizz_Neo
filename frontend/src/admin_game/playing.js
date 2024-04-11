@@ -30,11 +30,11 @@ function PlayingScreen({ data, ws }) {
 			{/* Temporizador, imagen y contador de respuestas */}
 			<div className="row mb-4 align-items-center">
 				<div className="col-1 text-center">
-					<span style={{ fontSize: "3rem", color: "#333" }}>
+					<span style={{ fontSize: "2rem", color: "#333" }}>
 						{data.question_time}
 					</span>
 				</div>
-				<div className="col-10 text-center">
+				<div className="col-9 text-center">
 					<img
 						src={questionInfo.question_image}
 						alt="Imagen de la pregunta"
@@ -42,9 +42,9 @@ function PlayingScreen({ data, ws }) {
 						style={{ maxHeight: "300px" }}
 					/>
 				</div>
-				<div className="col-1 text-center">
-					<span style={{ fontSize: "3rem", color: "#333" }}>
-						{data.responses}
+				<div className="col-2 text-center">
+					<span style={{ fontSize: "2rem", color: "#333" }}>
+						{data.responses} / {data.players}
 					</span>
 				</div>
 			</div>

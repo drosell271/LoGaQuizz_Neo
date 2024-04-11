@@ -31,7 +31,6 @@ function GameScreen() {
 	}, [testId]);
 
 	if (!gameState) return <div>Cargando...</div>;
-
 	switch (gameState.mode) {
 		case "LOBBY":
 			return <LobbyScreen data={gameState} ws={ws} />;

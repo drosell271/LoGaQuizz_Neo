@@ -48,7 +48,7 @@ function ResultsScreen({ data, ws }) {
 				),
 				backgroundColor: data.posible_answers.map((answer, index) => {
 					const color = colors[index % colors.length];
-					const opacity = answer.correct ? 1 : 0.7; // Establece la opacidad
+					const opacity = answer.correct ? 1 : 0.8; // Establece la opacidad
 					return `rgba(${parseInt(
 						color.slice(-6, -4),
 						16
@@ -142,6 +142,9 @@ function ResultsScreen({ data, ws }) {
 									boxShadow: answer.correct
 										? "0 0 8px rgba(0, 0, 0, 0.5)"
 										: "none",
+									border: answer.correct
+										? "2px solid #333"
+										: "2px solid transparent",
 								}}
 							>
 								{answer.answers}

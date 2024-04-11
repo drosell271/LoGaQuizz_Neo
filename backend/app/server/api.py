@@ -420,7 +420,7 @@ async def get_all_results(token: str, ID: int):
 
 		games_for_this_test = session.query(Game).filter(Game.test_id == ID).all()
 		if not games_for_this_test:
-			raise HTTPException(status_code=404, detail="No hay juegos para este test")
+			return []
 
 		games_json = []
 		for game in games_for_this_test:
@@ -561,7 +561,7 @@ async def get_all_results_by_player(token: str, ID: int, response_model=List[JSO
 
 		results = session.query(Result).filter(Result.player_id == ID).all()
 		if not results:
-			raise HTTPException(status_code=404, detail="No hay resultados para este jugador")
+			return []
 
 		gamesId = {result.game_id for result in results}
 		games = session.query(Game).filter(Game.id.in_(gamesId)).all()
@@ -995,11 +995,14 @@ async def calculate_results():
 			for solution in TEMP_RESULTS[token].solutions:
 				if TEST.questions[CURRENT_QUESTION].id == solution.question_id:
 					temp_answer = session.query(Answer).filter(Answer.id == solution.answer_id).first()
-
+					
 					if temp_answer and temp_answer.question_id == TEST.questions[CURRENT_QUESTION].id:
 						correct = temp_answer.isCorrect
 						if correct:
-							TEMP_RESULTS[token].score += TEST.questions[CURRENT_QUESTION].weight
+							if solution.time <= TEST.questions[CURRENT_QUESTION].allocatedTime * 0.9:
+								TEMP_RESULTS[token].score += TEST.questions[CURRENT_QUESTION].weight
+							else:
+								TEMP_RESULTS[token].score += round((solution.time / TEST.questions[CURRENT_QUESTION].allocatedTime) * TEST.questions[CURRENT_QUESTION].weight)
 						
 						temp_stats[token] = [TEST.questions[CURRENT_QUESTION].title, temp_answer.title, correct]
 						solucion_encontrada = True
