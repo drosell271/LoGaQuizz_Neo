@@ -10,6 +10,7 @@ class Test(Base):
 	title = Column(String, nullable=False)
 	image = Column(String)
 	archived = Column(Boolean, default=False)
+	actual_test_id = Column(Integer, default=None)
 	createdAt = Column(DateTime)
 	updatedAt = Column(DateTime)
 	questions = relationship("Question", backref="test", cascade="all, delete-orphan")

@@ -14,13 +14,17 @@ function PlayerResults() {
 					`http://localhost:8000/results/player/${id}/all/token=${token}`
 				);
 				if (!response.ok) {
-					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
-					throw new Error(
-						`Error ${response.status}: ${response.statusText}`
-					);
+					if (response.status === 404) {
+						setTests([]);
+					} else {
+						throw new Error(
+							`Error ${response.status}: ${response.statusText}`
+						);
+					}
+				} else {
+					const data = await response.json();
+					setTests(data);
 				}
-				const data = await response.json();
-				setTests(data);
 			} catch (error) {
 				console.error("Fetch error:", error);
 				// Redireccionar a la página de error sin pasar el código de estado como parámetro
@@ -39,7 +43,7 @@ function PlayerResults() {
 		navigate(-1);
 	};
 
-	let playerName = "Jugador Desconocido";
+	let playerName = "";
 	if (
 		tests.length > 0 &&
 		tests[0].games &&
@@ -98,7 +102,11 @@ function PlayerResults() {
 				</aside>
 
 				<section className="col-md-10">
-					<h2>Resultados de: {playerName}</h2>
+					{playerName == "" ? (
+						<h2>No hay resultados</h2>
+					) : (
+						<h2>Resultados de: {playerName}</h2>
+					)}
 					{tests ? (
 						<div className="row">
 							{tests.map((test) =>

@@ -221,7 +221,7 @@ function CreateTest() {
 					`Error ${response.status}: ${response.statusText}`
 				);
 			}
-
+			console.log(formData);
 			alert("Test creado con éxito");
 			navigate("/menu/test");
 		} catch (error) {
@@ -233,14 +233,6 @@ function CreateTest() {
 
 	const handleCancel = () => {
 		navigate("/menu/test");
-	};
-
-	const clearImage = () => {
-		updateFormField("image", "");
-	};
-
-	const clearQuestionImage = (qIndex) => {
-		updateQuestion(qIndex, "image", "");
 	};
 
 	const canAddQuestion = () => formData.questions.length < 10;
@@ -277,6 +269,14 @@ function CreateTest() {
 			reader.readAsDataURL(file);
 		}
 	}
+
+	const clearImage = () => {
+		updateFormField("image", "");
+	};
+
+	const clearQuestionImage = (qIndex) => {
+		updateQuestion(qIndex, "image", "");
+	};
 
 	return (
 		<div className="container-fluid">

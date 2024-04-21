@@ -27,7 +27,6 @@ function DetalleTest() {
 			setTest(data);
 		} catch (error) {
 			console.error("Fetch error:", error);
-			// Redireccionar a la página de error sin pasar el código de estado como parámetro
 			navigate("/error");
 		}
 	}, [id, token]);
@@ -35,6 +34,41 @@ function DetalleTest() {
 	useEffect(() => {
 		fetchTest();
 	}, [fetchTest]);
+
+	function transformJson(originalJson) {
+		return {
+			title: originalJson.title,
+			image: originalJson.image,
+			questions: originalJson.questions.map((question) => ({
+				title: question.title,
+				image: question.image,
+				allocatedTime: question.allocatedTime,
+				weight: question.weight,
+				answers: question.answers.map((answer) => ({
+					title: answer.title,
+					isCorrect: answer.isCorrect,
+				})),
+			})),
+		};
+	}
+
+	const handleExport = () => {
+		const simplifiedJson = transformJson(test);
+		// Convertir los datos JSON a una cadena de texto
+		const jsonString = JSON.stringify(simplifiedJson);
+		// Crear un Blob con los datos JSON
+		const blob = new Blob([jsonString], { type: "application/json" });
+		// Crear un enlace para descargar el Blob
+		const url = URL.createObjectURL(blob);
+		// Crear un enlace temporal y forzar la descarga
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `${test.title}.lgqz`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	};
 
 	const handleEdit = () => {
 		navigate(`/menu/test/${id}/edit`);
@@ -152,6 +186,12 @@ function DetalleTest() {
 					</button>
 					<button
 						className="btn btn-primary mb-3"
+						onClick={handleExport}
+					>
+						Exportar
+					</button>
+					<button
+						className="btn btn-primary mb-3"
 						onClick={handleViewGames}
 					>
 						Juegos
@@ -179,7 +219,6 @@ function DetalleTest() {
 						Volver
 					</button>
 				</aside>
-
 				<section className="col-md-10">
 					{test && (
 						<div className="card">

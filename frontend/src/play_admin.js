@@ -5,6 +5,7 @@ import LoadingScreen from "./admin_game/loading";
 import PlayingScreen from "./admin_game/playing";
 import ResultsScreen from "./admin_game/results";
 import EndScreen from "./admin_game/end";
+import RankingScreen from "./admin_game/ranking";
 
 function GameScreen() {
 	const { testId } = useParams();
@@ -42,6 +43,8 @@ function GameScreen() {
 			return <ResultsScreen data={gameState} ws={ws} />;
 		case "END":
 			return <EndScreen data={gameState} ws={ws} testid={testId} />;
+		case "RANKING":
+			return <RankingScreen data={gameState} ws={ws} />;
 		default:
 			console.log("Invalid game mode");
 			navigate("/error");

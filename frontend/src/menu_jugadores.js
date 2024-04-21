@@ -13,13 +13,18 @@ function MenuJugadores() {
 				`http://localhost:8000/player/all/token=${token}`
 			);
 			if (!response.ok) {
-				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
-				throw new Error(
-					`Error ${response.status}: ${response.statusText}`
-				);
+				if (response.status === 404) {
+					setJugadores([]);
+				} else {
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
+				}
+			} else {
+				const data = await response.json();
+				setJugadores(data);
 			}
-			const data = await response.json();
-			setJugadores(data);
 		} catch (error) {
 			console.error("Fetch error:", error);
 			// Redireccionar a la página de error sin pasar el código de estado como parámetro
@@ -116,6 +121,7 @@ function MenuJugadores() {
 				</aside>
 
 				<section className="col-md-9">
+					{jugadores.length === 0 ? <h2>No hay jugadores</h2> : ""}
 					{filteredJugadores ? (
 						<div className="row">
 							{filteredJugadores.map((jugador) => (

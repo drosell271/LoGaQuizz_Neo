@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 function MenuTest() {
@@ -8,7 +8,11 @@ function MenuTest() {
 	const [playedFilter, setPlayedFilter] = useState("todos");
 	const navigate = useNavigate();
 	const token = localStorage.getItem("token");
+	const fileInputRef = useRef(null);
 
+	const triggerFileInput = () => {
+		fileInputRef.current.click();
+	};
 	useEffect(() => {
 		fetchTests();
 	}, [token]);
@@ -19,16 +23,19 @@ function MenuTest() {
 				`http://localhost:8000/test/all/token=${token}`
 			);
 			if (!response.ok) {
-				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
-				throw new Error(
-					`Error ${response.status}: ${response.statusText}`
-				);
+				if (response.status === 404) {
+					setTests([]);
+				} else {
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
+				}
+			} else {
+				const data = await response.json();
+				setTests(data);
 			}
-			const data = await response.json();
-			setTests(data);
 		} catch (error) {
 			console.error("Fetch error:", error);
-			// Redireccionar a la página de error sin pasar el código de estado como parámetro
 			navigate("/error");
 		}
 	};
@@ -81,6 +88,56 @@ function MenuTest() {
 
 	const handleNewTest = () => {
 		navigate("/menu/test/new");
+	};
+
+	const handleImportTest = async () => {
+		const file = fileInputRef.current.files[0];
+		if (!file) {
+			alert("Por favor, selecciona un archivo .lgqz.");
+			return;
+		}
+
+		if (!file.name.endsWith(".lgqz")) {
+			alert("El archivo no tiene la extensión .lgqz");
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = async (event) => {
+			try {
+				const jsonData = JSON.parse(event.target.result);
+				// Suponiendo que tienes 'token' disponible
+				const response = await fetch(
+					`http://localhost:8000/test/create/token=${token}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(jsonData),
+					}
+				);
+
+				if (!response.ok) {
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
+				}
+
+				alert("Test importado con éxito");
+				window.location.reload(true);
+			} catch (error) {
+				console.error("Fetch error:", error);
+				navigate("/error");
+			}
+		};
+
+		reader.onerror = () => {
+			console.error("Error al leer el archivo");
+			alert("Error al leer el archivo");
+		};
+
+		reader.readAsText(file);
 	};
 
 	const handleSearchChange = (e) => {
@@ -156,7 +213,19 @@ function MenuTest() {
 					>
 						Nuevo Test
 					</button>
-
+					<button
+						className="btn btn-primary mb-3 w-100"
+						onClick={triggerFileInput}
+					>
+						Importar Test
+					</button>
+					<input
+						type="file"
+						ref={fileInputRef}
+						accept=".lgqz"
+						style={{ display: "none" }}
+						onChange={handleImportTest}
+					/>
 					<input
 						type="text"
 						className="form-control mb-3 w-100"
@@ -264,6 +333,7 @@ function MenuTest() {
 				</aside>
 
 				<section className="col-md-9">
+					{tests.length === 0 ? <h2>No hay resultados</h2> : ""}
 					{filteredTests ? (
 						<div className="row">
 							{filteredTests.map((test) => (
@@ -282,7 +352,7 @@ function MenuTest() {
 											}
 											className="card-img-top img-fluid"
 											style={{
-												maxHeight: "200px",
+												maxHeight: "150px",
 												objectFit: "cover",
 											}}
 											alt={`Test ${test.title}`}

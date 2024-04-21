@@ -500,7 +500,7 @@ function EditTest() {
 								</div>
 								<br />
 								<div className="mb-3">
-									<h7>Respuestas</h7>
+									<h6>Respuestas</h6>
 								</div>
 								{question.answers.map((answer, aIndex) => (
 									<div

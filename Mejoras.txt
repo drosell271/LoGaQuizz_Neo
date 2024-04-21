@@ -1,0 +1,12 @@
+ 0. Arreglar 0 games crash								OK
+ 1. Visualizcación botones jugador						OK
+ 2. Cuantos han respondido X/Total 						OK
+ 3. Mejorar visualizacion respuesta correcta			OK
+ 4. Puntuacion en funcion del tiempo					OK
+ 5. Ranking entre cada pregunta a peticion del profesor	OK		
+ 6. Exportar como csv el resultado						OK
+ 7. Añadir exportar / Importar							OK
+ 8. Respuesta multiple									
+ 9. Imagenes
+10. Guardar test jugados antes de editarlos				OK
+

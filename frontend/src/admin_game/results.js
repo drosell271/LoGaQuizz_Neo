@@ -31,6 +31,10 @@ function ResultsScreen({ data, ws }) {
 		ws.send("END");
 	};
 
+	const handleRanking = () => {
+		ws.send("RANKING");
+	};
+
 	// Colores para las opciones de respuesta
 	const colors = ["#FF7043", "#FFCA28", "#29B6F6", "#66BB6A"];
 
@@ -162,6 +166,12 @@ function ResultsScreen({ data, ws }) {
 						className="btn btn-danger btn-lg"
 					>
 						Finalizar Partida
+					</button>
+					<button
+						onClick={handleRanking}
+						className="btn btn-secondary btn-lg"
+					>
+						Ranking actual
 					</button>
 					<button
 						onClick={handleNext}

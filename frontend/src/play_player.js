@@ -44,6 +44,8 @@ function GameScreen() {
 			return <ResultsScreen data={gameState} />;
 		case "END":
 			return <EndScreen data={gameState} />;
+		case "RANKING":
+			return <ResultsScreen data={gameState} />;
 		default:
 			console.log("Invalid game mode");
 			navigate("/error");

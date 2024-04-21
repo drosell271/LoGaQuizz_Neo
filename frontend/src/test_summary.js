@@ -18,14 +18,19 @@ function TestResults() {
 				`http://localhost:8000/results/test/${id}/all/token=${token}`
 			);
 			if (!response.ok) {
-				// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
-				throw new Error(
-					`Error ${response.status}: ${response.statusText}`
-				);
+				if (response.status === 404) {
+					setTestResults([]);
+				} else {
+					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
+					throw new Error(
+						`Error ${response.status}: ${response.statusText}`
+					);
+				}
+			} else {
+				const data = await response.json();
+				setTestName(data.title || "Test");
+				setTestResults(data.games || []);
 			}
-			const data = await response.json();
-			setTestName(data.title || "Test");
-			setTestResults(data.games || []);
 		} catch (error) {
 			console.error("Fetch error:", error);
 			// Redireccionar a la página de error sin pasar el código de estado como parámetro
@@ -58,8 +63,8 @@ function TestResults() {
 		}
 	};
 
-	const handleMoreClick = (gameId) => {
-		navigate(`/menu/test/${id}/game/${gameId}`);
+	const handleMoreClick = (gameId, testid) => {
+		navigate(`/menu/test/${testid}/game/${gameId}`);
 	};
 
 	const handgleReturn = () => {
@@ -114,7 +119,11 @@ function TestResults() {
 				</aside>
 
 				<section className="col-md-10">
-					<h2>Resultados de: {testName}</h2>
+					{testResults.length === 0 ? (
+						<h2>No hay juegos</h2>
+					) : (
+						<h2>Resultados de: {testName}</h2>
+					)}
 					{testResults.map((game) => (
 						<div key={game.id} className="col-md-4 mb-3">
 							<div className="card h-100">
@@ -132,7 +141,10 @@ function TestResults() {
 										<button
 											className="btn btn-primary"
 											onClick={() =>
-												handleMoreClick(game.id)
+												handleMoreClick(
+													game.id,
+													game.test_id
+												)
 											}
 										>
 											Más

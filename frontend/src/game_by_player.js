@@ -20,7 +20,6 @@ function PlayerGameDetails() {
 				}
 
 				const data = await response.json();
-				console.log(data);
 				setGameDetails(data);
 			} catch (error) {
 				console.error("Fetch error:", error);
@@ -195,7 +194,10 @@ function PlayerGameDetails() {
 																					isCorrectAnswer
 																						? "text-success"
 																						: ""
-																				}`}
+																				}
+
+																					${isAnsweredByUser && !isCorrectAnswer ? "text-danger" : ""}
+																				`}
 																			>
 																				{isAnsweredByUser && (
 																					<strong>

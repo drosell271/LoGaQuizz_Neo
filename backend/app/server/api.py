@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
 from datetime import datetime
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker
 from typing import List, Optional
 import random
@@ -196,18 +196,15 @@ async def actual_session(token: str):
 	elif token in PLAYERS_TOKEN:
 		return {"detail": f"Sesión de jugador activa: {PLAYERS_TOKEN[token]}"}
 
-
-
-
 # RUTAS DE TESTS
 @app.get("/test/all/token={token}", response_model=List[JSON_Test_Output])
 async def get_all_test(token: str):
 	await is_admin(token)
 	try:
-		all_test = session.query(Test).all()
+		all_test = session.query(Test).filter(Test.actual_test_id.is_(None)).all()
 
 		if not all_test:
-			return []
+			raise HTTPException(status_code=404, detail="No hay test")
 
 		response = []
 
@@ -287,12 +284,16 @@ async def get_test_by_ID(token: str, ID: int):
 async def delete_test_by_ID(token: str, ID: int):
 	await is_admin(token)
 	try:
-		test_to_delete = session.query(Test).filter(Test.id == ID).first()
-		if test_to_delete is None:
+		tests_to_delete = session.query(Test).filter(or_(Test.id == ID, Test.actual_test_id == ID)).all()
+
+		if not tests_to_delete:
 			raise HTTPException(status_code=404, detail="Test no encontrado")
-		session.delete(test_to_delete)
+
+		# Eliminar todos los Tests encontrados
+		for test in tests_to_delete:
+			session.delete(test)
+
 		session.commit()
-		return {"detail": "Test eliminado correctamente"}
 	
 	except HTTPException as e:
 		raise e
@@ -394,8 +395,60 @@ async def create_test(token: str, input_data: JSON_Test_Input):
 async def edit_test(token: str, ID: int, input_data: JSON_Test_Input):
 	await is_admin(token)
 	try:
-		await delete_test_by_ID(ID=ID, token=token)
-		await create_test(input_data=input_data, token=token)
+		for question in input_data.questions:
+			correct_answer = len([answer for answer in question.answers if answer.isCorrect])
+			if  correct_answer == 0:
+				raise HTTPException(status_code=500, detail="Debe haber al menos una respuesta correcta")
+			elif correct_answer > 1: #and question.questionType == "unica":
+				raise HTTPException(status_code=500, detail="Solo puede haber una respuesta correcta")
+			elif correct_answer > 4:
+				raise HTTPException(status_code=500, detail="Solo puede haber cuatro respuestas correctas")
+			#elif (correct_answer < 2 or len(question.answers) < 3) and question.questionType == "multiple":
+			#	raise HTTPException(status_code=500, detail="Debe haber al menos dos respuestas correctas y tres pregunta_raws para un test de selección múltiple")
+
+		new_test = Test(
+			title=input_data.title,
+			image=input_data.image,
+			createdAt=datetime.now(),
+			updatedAt=datetime.now()
+		)
+		session.add(new_test)
+		session.flush()
+
+		if not input_data.questions:
+			raise HTTPException(status_code=400, detail="No hay preguntas para guardar")
+
+		for question_data in input_data.questions:
+			if not question_data.answers:
+				raise HTTPException(status_code=400, detail="No hay respuestas para guardar")
+
+			new_question = Question(
+				test_id=new_test.id,
+				title=question_data.title,
+				image=question_data.image,
+				#questionType=question_data.questionType,
+				allocatedTime=question_data.allocatedTime,
+				weight=question_data.weight
+			)
+			session.add(new_question)
+			session.flush()
+
+			for answer_data in question_data.answers:
+				new_answer = Answer(
+					question_id=new_question.id,
+					title=answer_data.title,
+					isCorrect=answer_data.isCorrect
+				)
+				session.add(new_answer)
+
+		session.commit()
+
+
+		tests_to_update = session.query(Test).filter(or_(Test.id == ID, Test.actual_test_id == ID)).all()
+		for test in tests_to_update:
+			test.actual_test_id = new_test.id
+
+		session.commit()
 		return {"detail": "Test editado correctamente"}
 	except HTTPException as e:
 		raise e
@@ -414,13 +467,18 @@ async def edit_test(token: str, ID: int, input_data: JSON_Test_Input):
 async def get_all_results(token: str, ID: int):
 	await is_admin(token)
 	try:
+		# Asegurar que el test exista
 		test = session.query(Test).filter(Test.id == ID).first()
 		if test is None:
 			raise HTTPException(status_code=404, detail="Test no encontrado")
 
-		games_for_this_test = session.query(Game).filter(Game.test_id == ID).all()
+		# Obtener todos los juegos para los tests cuyo id es ID o cuyo actual_test_id es ID
+		tests_ids = session.query(Test.id).filter(or_(Test.id == ID, Test.actual_test_id == ID)).all()
+		test_ids = [t[0] for t in tests_ids]  # Extraer solo los identificadores de test
+
+		games_for_this_test = session.query(Game).filter(Game.test_id.in_(test_ids)).all()
 		if not games_for_this_test:
-			return []
+			raise HTTPException(status_code=404, detail="No hay juegos para este test")
 
 		games_json = []
 		for game in games_for_this_test:
@@ -438,10 +496,10 @@ async def get_all_results(token: str, ID: int):
 					JSON_Result_Output(
 						id=result.id,
 						player_id=result.player_id,
-						player_name=session.query(Player).filter(Player.id == result.player_id).first().name,
+						player_name=session.query(Player).filter(Player.id == result.player_id).first().name if session.query(Player).filter(Player.id == result.player_id).first() else "Unknown Player",
 						game_id=result.game_id,
 						score=result.score,
-						solutions=None
+						solutions=None  # Asumiendo que la implementación para las soluciones es similar
 					) for result in results
 				]
 			)
@@ -455,7 +513,7 @@ async def get_all_results(token: str, ID: int):
 			played=await count_games(test.id), 
 			createdAt=test.createdAt,
 			updatedAt=test.updatedAt,
-			questions=None,
+			questions=None,  # Suponiendo que la implementación para preguntas es similar
 			games=games_json
 		)
 
@@ -561,7 +619,7 @@ async def get_all_results_by_player(token: str, ID: int, response_model=List[JSO
 
 		results = session.query(Result).filter(Result.player_id == ID).all()
 		if not results:
-			return []
+			raise HTTPException(status_code=404, detail="No hay resultados para este jugador")
 
 		gamesId = {result.game_id for result in results}
 		games = session.query(Game).filter(Game.id.in_(gamesId)).all()
@@ -817,7 +875,7 @@ async def get_all_players(token: str):
 		all_players = session.query(Player).all()
 
 		if not all_players:
-			return []
+			raise HTTPException(status_code=404, detail="No hay jugadores")
 
 
 		response_data = []
@@ -999,7 +1057,7 @@ async def calculate_results():
 					if temp_answer and temp_answer.question_id == TEST.questions[CURRENT_QUESTION].id:
 						correct = temp_answer.isCorrect
 						if correct:
-							if solution.time <= TEST.questions[CURRENT_QUESTION].allocatedTime * 0.9:
+							if solution.time >= TEST.questions[CURRENT_QUESTION].allocatedTime * 0.90:
 								TEMP_RESULTS[token].score += TEST.questions[CURRENT_QUESTION].weight
 							else:
 								TEMP_RESULTS[token].score += round((solution.time / TEST.questions[CURRENT_QUESTION].allocatedTime) * TEST.questions[CURRENT_QUESTION].weight)
@@ -1020,7 +1078,7 @@ async def transmitir_admin():
 
 	if MODE == "LOBBY":
 		mensaje = {
-			"mode": "LOBBY",
+			"mode": MODE,
 			"PIN": PIN,
 			"test": TEST.title,
 			"image": TEST.image,
@@ -1035,7 +1093,7 @@ async def transmitir_admin():
 	elif MODE == "LOADING":
 		for COUNTDOWN in range(loading_time, 0, -1):
 			mensaje = {
-				"mode": "LOADING",
+				"mode": MODE,
 				"countdown": COUNTDOWN,
 				"time": TIME
 			}
@@ -1048,7 +1106,7 @@ async def transmitir_admin():
 		Question = TEST.questions[CURRENT_QUESTION]
 		while TIME > 0:
 			mensaje = {
-				"mode": "PLAYING",
+				"mode": MODE,
 				"question": [
 					{
 						"question_id": Question.id,
@@ -1081,7 +1139,7 @@ async def transmitir_admin():
 		MODE = "RESULTS"
 
 		mensaje = {
-			"mode": "RESULTS",
+			"mode": MODE,
 			"global_score": [
 				{
 					"player": PLAYERS_TOKEN[token],
@@ -1109,10 +1167,25 @@ async def transmitir_admin():
 		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
 		await broadcast()
 		return
-	
+
+	elif MODE == "RANKING":
+		mensaje = {
+			"mode": MODE,
+			"results": [
+				{
+					"player": PLAYERS_TOKEN[token],
+					"score": TEMP_RESULTS[token].score
+				} for token in TEMP_RESULTS
+			],
+			"instructions": "Enviar 'NEXT' para guardar los resultados, para no guardar mande 'END'"
+		}
+		await ADMIN_CONNECTION.send_text(json.dumps(mensaje))
+		await broadcast()
+		return
+
 	elif MODE == "END":
 		mensaje = {
-			"mode": "END",
+			"mode": MODE,
 			"results": [
 				{
 					"player": PLAYERS_TOKEN[token],
@@ -1178,7 +1251,7 @@ async def recibir_admin():
 				elif data != None:
 					await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
 			
-			elif MODE == "RESULTS":
+			elif MODE == "RESULTS" or MODE == "RANKING":
 				if data == "NEXT":
 					CURRENT_QUESTION += 1
 					TOTAL_RESPONSES = 0
@@ -1203,6 +1276,22 @@ async def recibir_admin():
 					
 					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
 				
+				elif data == "RANKING":
+					MODE = "RANKING"
+
+					if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+					
+					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
+				elif data == "RESULTS":
+					MODE = "RESULTS"
+
+					if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+						await TAREA_TRANSMITIR
+					
+					TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
 				elif data != None:
 					await ADMIN_CONNECTION.send_text(json.dumps({"error": "Comando incorrecto"}))
 
@@ -1268,7 +1357,7 @@ async def save_results():
 async def transmitir_jugadores(websocket: WebSocket, token: str):
 	if MODE == "LOBBY":
 		mensaje = {
-			"mode": "LOBBY",
+			"mode": MODE,
 			"name": PLAYERS_TOKEN[token],
 			"token": token
 		}
@@ -1276,7 +1365,7 @@ async def transmitir_jugadores(websocket: WebSocket, token: str):
 
 	elif MODE == "LOADING":
 		mensaje = {
-			"mode": "LOADING",
+			"mode": MODE,
 			"countdown": COUNTDOWN,
 			"time": TIME
 		}
@@ -1285,7 +1374,7 @@ async def transmitir_jugadores(websocket: WebSocket, token: str):
 	elif MODE == "PLAYING":
 		Question = TEST.questions[CURRENT_QUESTION]
 		mensaje = {
-			"mode": "PLAYING",
+			"mode": MODE,
 			"question": [
 				{
 					"question_id": Question.id,
@@ -1303,9 +1392,9 @@ async def transmitir_jugadores(websocket: WebSocket, token: str):
 		}
 		await websocket.send_text(json.dumps(mensaje))
 
-	elif MODE == "RESULTS":
+	elif MODE == "RESULTS" or MODE == "RANKING":
 		mensaje = {
-			"mode": "RESULTS",
+			"mode": MODE,
 			"score": TEMP_RESULTS[token].score,
 			"question": SUMMARY[CURRENT_QUESTION][token][0],
 			"answer": SUMMARY[CURRENT_QUESTION][token][1],
@@ -1313,10 +1402,10 @@ async def transmitir_jugadores(websocket: WebSocket, token: str):
 		}
 
 		await websocket.send_text(json.dumps(mensaje))
-
+	
 	elif MODE == "END":
 		mensaje = {
-			"mode": "END",
+			"mode": MODE,
 			"score": TEMP_RESULTS[token].score
 		}
 		await websocket.send_text(json.dumps(mensaje))
@@ -1361,7 +1450,7 @@ async def recibir_jugadores(websocket: WebSocket, token: str):
 
 @app.websocket("/play/pin={playerPIN}/player={player}")
 async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
-	global PLAYERS_TOKEN, PLAYERS_CONNECTIONS, TEMP_RESULTS, SUMMARY, TAREA_TRANSMITIR
+	global PLAYERS_TOKEN, PLAYERS_CONNECTIONS, TEMP_RESULTS, SUMMARY, TAREA_TRANSMITIR, MODE
 	await websocket.accept()
 	
 	if ADMIN_CONNECTION is None or MODE != "LOBBY":
@@ -1404,13 +1493,19 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 			await websocket.send_text(json.dumps({"error": f"Error: {str(e)}"}))
 
 	finally:
+		
 		del PLAYERS_TOKEN[token]
 		del PLAYERS_CONNECTIONS[token]
-		del TEMP_RESULTS[token]
-		for i in range(0, CURRENT_QUESTION):
-			del SUMMARY[i][token]
-		
-		if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
-			await TAREA_TRANSMITIR
-		
-		TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+		if MODE == "LOBBY":
+			if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+				await TAREA_TRANSMITIR
+			
+			TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+
+		elif len(PLAYERS_CONNECTIONS) == 0:
+			MODE = "END"
+
+			if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+				await TAREA_TRANSMITIR
+			
+			TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())

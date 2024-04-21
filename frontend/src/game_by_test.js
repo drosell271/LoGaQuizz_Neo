@@ -113,7 +113,6 @@ function GameDetail() {
 					`http://localhost:8000/results/test/${testid}/game/${gameid}/token=${token}`
 				);
 				if (!response.ok) {
-					// Si el estado de la respuesta no es OK, arrojar un error con el código de estado
 					throw new Error(
 						`Error ${response.status}: ${response.statusText}`
 					);
@@ -122,13 +121,11 @@ function GameDetail() {
 				setGameData(data);
 				setSortedResults(
 					data.games[0].results.sort((a, b) => {
-						// Ordenación inicial por 'player_name' en orden descendente alfabético
 						return b.player_name.localeCompare(a.player_name);
 					})
 				);
 			} catch (error) {
 				console.error("Fetch error:", error);
-				// Redireccionar a la página de error sin pasar el código de estado como parámetro
 				navigate("/error");
 			}
 		};
@@ -161,6 +158,67 @@ function GameDetail() {
 	const handgleReturn = () => {
 		navigate(-1);
 	};
+
+	function jsonToCSV(json) {
+		let csvString = "";
+
+		// Agregar título del test y fecha de creación
+		csvString += `${json.title};;Jugado;${json.createdAt};\n;;\n;;\n`;
+
+		// Procesar cada pregunta
+		json.questions.forEach((question) => {
+			csvString += `${question.title};;;\n`;
+			let answerRow = "";
+			let correctRow = "Correcta?;";
+			question.answers.forEach((answer) => {
+				answerRow += `;${answer.title}`;
+				correctRow += answer.isCorrect ? ";x" : ";";
+			});
+			csvString += `${answerRow}\n${correctRow}\n`;
+
+			// Resultados de los jugadores
+			json.games.forEach((game) => {
+				game.results.forEach((result) => {
+					let playerRow = `${result.player_name}`;
+					question.answers.forEach((answer) => {
+						const solution = result.solutions.find(
+							(sol) =>
+								sol.question_id === question.id &&
+								sol.answer_id === answer.id
+						);
+						playerRow += solution ? ";x" : ";";
+					});
+					csvString += `${playerRow}\n`;
+				});
+			});
+
+			csvString += ";;;\n;;;\n";
+		});
+
+		// Puntuación final
+		csvString += "Puntuación final;;;\n";
+		json.games.forEach((game) => {
+			game.results.forEach((result) => {
+				csvString += `${result.player_name};${result.score};;;\n`;
+			});
+		});
+
+		return csvString;
+	}
+
+	function handleDownloadCSV() {
+		const csvData = jsonToCSV(gameData);
+		const bom = new Uint8Array([0xef, 0xbb, 0xbf]);
+		const blob = new Blob([bom, csvData], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "test_de_banderas.csv";
+		a.click();
+		window.URL.revokeObjectURL(url);
+	}
 
 	return (
 		<div className="container-fluid">
@@ -202,6 +260,12 @@ function GameDetail() {
 
 			<div className="row">
 				<aside className="col-md-2 d-flex flex-column">
+					<button
+						className="btn btn-success mb-3"
+						onClick={handleDownloadCSV}
+					>
+						Descargar Resultados
+					</button>
 					<button
 						className="btn btn-danger mb-3"
 						onClick={handleDeleteGame}
