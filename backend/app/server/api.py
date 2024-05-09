@@ -1354,6 +1354,10 @@ async def save_results():
 	
 	await ADMIN_CONNECTION.send_text(json.dumps({"status": "Partida guardada correctamente"}))
 
+	PLAYERS_TOKEN.clear()
+	PLAYERS_CONNECTIONS.clear()
+
+
 async def transmitir_jugadores(websocket: WebSocket, token: str):
 	if MODE == "LOBBY":
 		mensaje = {
@@ -1493,19 +1497,19 @@ async def player_websocket(websocket: WebSocket, playerPIN: int, player: str):
 			await websocket.send_text(json.dumps({"error": f"Error: {str(e)}"}))
 
 	finally:
-		
-		del PLAYERS_TOKEN[token]
-		del PLAYERS_CONNECTIONS[token]
-		if MODE == "LOBBY":
-			if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
-				await TAREA_TRANSMITIR
-			
-			TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+		if MODE != "END":
+			del PLAYERS_TOKEN[token]
+			del PLAYERS_CONNECTIONS[token]
+			if MODE == "LOBBY":
+				if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+					await TAREA_TRANSMITIR
+				
+				TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
 
-		elif len(PLAYERS_CONNECTIONS) == 0:
-			MODE = "END"
+			elif len(PLAYERS_CONNECTIONS) == 0:
+				MODE = "END"
 
-			if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
-				await TAREA_TRANSMITIR
-			
-			TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
+				if TAREA_TRANSMITIR is not None and not TAREA_TRANSMITIR.done():
+					await TAREA_TRANSMITIR
+				
+				TAREA_TRANSMITIR = asyncio.create_task(transmitir_admin())
