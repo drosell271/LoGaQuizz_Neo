@@ -168,6 +168,25 @@ function MenuTest() {
 	});
 
 	const defaultImage = "";
+
+	/*<button className="btn btn-danger" onClick={() => handleDelete(test.id)}>
+		Eliminar
+	</button>;
+	
+	<button
+		className="btn btn-warning me-2" // Agregado me-2 para dar margen extra
+		onClick={() =>
+			handleArchiveToggle(
+				test.id,
+				!test.archived
+			)
+		}
+	>
+		{test.archived
+			? "Desarchivar"
+			: "Archivar"}
+	</button>*/
+
 	return (
 		<div className="container-fluid">
 			{" "}
@@ -383,31 +402,7 @@ function MenuTest() {
 												>
 													Info
 												</button>
-												<div className="d-flex">
-													<button
-														className="btn btn-warning me-2" // Agregado me-2 para dar margen extra
-														onClick={() =>
-															handleArchiveToggle(
-																test.id,
-																!test.archived
-															)
-														}
-													>
-														{test.archived
-															? "Desarchivar"
-															: "Archivar"}
-													</button>
-													<button
-														className="btn btn-danger"
-														onClick={() =>
-															handleDelete(
-																test.id
-															)
-														}
-													>
-														Eliminar
-													</button>
-												</div>
+												<div className="d-flex"></div>
 											</div>
 										</div>
 									</div>
