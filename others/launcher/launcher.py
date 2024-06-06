@@ -88,7 +88,7 @@ def signal_handler(sig, frame):
 
 def lanzar_comandos_en_paralelo():
 	# Define los comandos para frontend y backend
-	comando_frontend = "npm start"
+	comando_frontend = "npm run start"
 	comando_backend = "python ./app/main.py"
 
 	# Directorios de trabajo para cada comando
@@ -224,7 +224,7 @@ def instalar_backend():
 		subprocess.call("python -m pip install --upgrade pip", shell=True, cwd="./LoGaQuizz_Neo/backend", stdout=open(null_device, 'w'), stderr=open(null_device, 'w'))
 		
 		print("Instalando dependencias del backend...")
-		subprocess.call("pip install -r requeriments.txt", shell=True, cwd="./LoGaQuizz_Neo/backend", stdout=open(null_device, 'w'), stderr=open(null_device, 'w'))
+		subprocess.call("pip install -r requirements.txt", shell=True, cwd="./LoGaQuizz_Neo/backend", stdout=open(null_device, 'w'), stderr=open(null_device, 'w'))
 		
 	else:
 		print("El backend ya está configurado.")
