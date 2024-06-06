@@ -100,7 +100,7 @@ Asegúrate de que todos los usuarios tengan acceso a la red adecuada y comprenda
 
 ## 🌟 Launcher
 
-![Imagen de launcher](images/Launcher.png)
+![Imagen de launcher](others/images/Launcher.png)
 
 Se ha simplificado el proceso de instalación y ejecución con un launcher que puedes descargar desde la sección de `Releases`.  
 Para utilizarlo, siga las siguientes instrucciones:
